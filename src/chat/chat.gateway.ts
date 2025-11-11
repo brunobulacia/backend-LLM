@@ -21,6 +21,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() wss: Server;
   constructor(private readonly chatService: ChatService) {}
 
+  //CREAR NSTANCIA DE OLLAMA SIN API KEY
   ollama = new Ollama();
 
   handleConnection(client: Socket) {
