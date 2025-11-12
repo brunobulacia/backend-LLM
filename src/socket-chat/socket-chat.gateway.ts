@@ -6,7 +6,7 @@ import {
   OnGatewayDisconnect,
   OnGatewayConnection,
 } from '@nestjs/websockets';
-import { ChatService } from './chat.service';
+import { SocketChatService } from './socket-chat.service';
 import { Server, Socket } from 'socket.io';
 import { Ollama } from 'ollama';
 
@@ -17,24 +17,26 @@ import { Ollama } from 'ollama';
   },
   namespace: '/',
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class SocketChatGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer() wss: Server;
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly socketChatService: SocketChatService) {}
 
   //CREAR NSTANCIA DE OLLAMA SIN API KEY
   ollama = new Ollama();
 
   handleConnection(client: Socket) {
-    this.chatService.addClient(client);
+    this.socketChatService.addClient(client);
     this.wss.emit('message', {
-      conexiones: this.chatService.getClientCount(),
+      conexiones: this.socketChatService.getClientCount(),
     });
   }
 
   handleDisconnect(client: Socket) {
     console.log(`Cliente desconectado: ${client.id}`);
     this.wss.emit('message', {
-      conexiones: this.chatService.getClientCount(),
+      conexiones: this.socketChatService.getClientCount(),
     });
   }
 

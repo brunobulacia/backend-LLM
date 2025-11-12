@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { OllamaModule } from './ollama/ollama.module';
-import { ChatModule } from './chat/chat.module';
+import { SocketChatModule } from './socket-chat/socket-chat.module';
 import { PublicacionModule } from './publicacion/publicacion.module';
-import { PromptModule } from './prompt/prompt.module';
+import { MensajesModule } from './mensajes/mensajes.module';
+import { ChatsModule } from './chats/chats.module';
 
 @Module({
-  imports: [OllamaModule, ChatModule, PublicacionModule, PromptModule],
+  imports: [SocketChatModule, PublicacionModule, MensajesModule, ChatsModule],
   controllers: [],
   providers: [],
 })

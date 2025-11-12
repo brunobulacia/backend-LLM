@@ -8,27 +8,40 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model Prompt {
-  id        String   @id @default(uuid())
+model Mensaje {
+  id        String @id @default(uuid())
   contenido String
-  Publicacion Publicacion[]
+  chatId    String
+  chat      Chat   @relation(fields: [chatId], references: [id])
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
+model Chat {
+  id            String        @id @default(uuid())
+  nombre        String
+  mensajes      Mensaje[]
+  publicaciones Publicacion[]
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
 model Publicacion {
-  id        String   @id @default(uuid())
-  titulo    String
-  link      String
+  id         String @id @default(uuid())
+  titulo     String
+  link       String
   plataforma String
-  promptId  String
-  prompt    Prompt   @relation(fields: [promptId], references: [id])
+  chatId     String
+  chat       Chat   @relation(fields: [chatId], references: [id])
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())

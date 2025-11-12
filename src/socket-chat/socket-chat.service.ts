@@ -6,7 +6,7 @@ interface ConnectedClients {
 }
 
 @Injectable()
-export class ChatService {
+export class SocketChatService {
   private connectedClients: ConnectedClients = {};
 
   addClient(client: Socket) {
