@@ -28,4 +28,12 @@ export class MensajesService {
   remove(id: string) {
     return this.prismaService.mensaje.delete({ where: { id } });
   }
+
+  //GET MENSAJES BY CHAT ID
+  async findByChatId(chatId: string) {
+    return this.prismaService.mensaje.findMany({
+      where: { chatId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
 }

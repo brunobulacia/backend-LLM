@@ -25,6 +25,11 @@ export class MensajesController {
     return this.mensajesService.findAll();
   }
 
+  @Get('chat/:chatId')
+  findByChatId(@Param('chatId') chatId: string) {
+    return this.mensajesService.findByChatId(chatId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.mensajesService.findOne(id);

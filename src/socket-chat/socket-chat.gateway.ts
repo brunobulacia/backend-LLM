@@ -9,6 +9,7 @@ import {
 import { SocketChatService } from './socket-chat.service';
 import { Server, Socket } from 'socket.io';
 import { Ollama } from 'ollama';
+import { MensajesService } from 'src/mensajes/mensajes.service';
 
 @WebSocketGateway({
   cors: {
@@ -21,7 +22,10 @@ export class SocketChatGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer() wss: Server;
-  constructor(private readonly socketChatService: SocketChatService) {}
+  constructor(
+    private readonly socketChatService: SocketChatService,
+    private readonly mensajesService: MensajesService,
+  ) {}
 
   //CREAR NSTANCIA DE OLLAMA SIN API KEY
   ollama = new Ollama();
@@ -42,8 +46,20 @@ export class SocketChatGateway
 
   //PARA GENERAR EL CHAT PALABRA POR PALABRA EN TIEMPO REAL
   @SubscribeMessage('prompt')
-  async handlePrompt(@MessageBody() data: { prompt: string }, client: Socket) {
+  async handlePrompt(
+    @MessageBody() data: { chatId: string; prompt: string },
+    client: Socket,
+  ) {
+    console.log('Chat ID:', data.chatId);
     console.log('Prompt recibido del cliente:', data.prompt);
+
+    //THERES NOTHING U CAN TELL ME
+    const createdMensaje = await this.mensajesService.create({
+      contenido: data.prompt,
+      chatId: data.chatId,
+      emisor: 'USUARIO',
+    });
+
     const response = await this.ollama.chat({
       model: 'gpt-oss:120b-cloud',
       messages: [{ role: 'user', content: data.prompt }],
@@ -57,5 +73,12 @@ export class SocketChatGateway
         respuesta: message,
       });
     }
+
+    //GUARDAR EL MENSAJE DEL FUCKING LLM EN LA BASE DE DATOS
+    const createdMensajeIA = await this.mensajesService.create({
+      contenido: message,
+      chatId: data.chatId,
+      emisor: 'LLM',
+    });
   }
 }

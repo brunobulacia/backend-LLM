@@ -13,9 +13,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Emisor {
+  USUARIO
+  LLM
+}
+
 model Mensaje {
   id        String @id @default(uuid())
   contenido String
+  emisor    Emisor
   chatId    String
   chat      Chat   @relation(fields: [chatId], references: [id])
 
