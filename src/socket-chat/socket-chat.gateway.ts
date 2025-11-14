@@ -10,6 +10,7 @@ import { SocketChatService } from './socket-chat.service';
 import { Server, Socket } from 'socket.io';
 import { Ollama } from 'ollama';
 import { MensajesService } from 'src/mensajes/mensajes.service';
+import { systemPrompt } from './system-prompts/publicaciones.prompt';
 
 //IMPORT PARA OPENAI
 import OpenAI from 'openai';
@@ -70,7 +71,14 @@ export class SocketChatGateway
 
     const response = await this.client.responses.create({
       model: 'gpt-5',
-      input: [{ role: 'user', content: data.prompt }],
+
+      input: [
+        { role: 'user', content: data.prompt },
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+      ],
       stream: true,
     });
 

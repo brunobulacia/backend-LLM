@@ -1,25 +1,338 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend LLM - Sistema de Chat con IA para FICCT
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Este proyecto es un backend desarrollado con NestJS que implementa un sistema de chat en tiempo real con inteligencia artificial, específicamente diseñado para generar publicaciones para redes sociales de la Facultad de Ingeniería de Ciencias de la Computación (FICCT) de la Universidad Autónoma Gabriel René Moreno.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 Características
+
+- **Chat en tiempo real** con WebSockets (Socket.io)
+- **Integración con OpenAI GPT** para generación de contenido
+- **Soporte para Ollama** como alternativa local
+- **Base de datos PostgreSQL** con Prisma ORM
+- **Generación de publicaciones** para múltiples redes sociales (Facebook, Instagram, WhatsApp, TikTok, LinkedIn)
+- **Sistema de persistencia** de chats y mensajes
+
+## 🏗️ Arquitectura
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend       │    │   OpenAI API    │
+│   (Cliente)     │◄──►│   (NestJS)       │◄──►│   / Ollama      │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                              │
+                              ▼
+                       ┌──────────────────┐
+                       │   PostgreSQL     │
+                       │   (Prisma ORM)   │
+                       └──────────────────┘
+```
+
+### Módulos Principales
+
+1. **SocketChatModule**: Maneja las conexiones WebSocket y la comunicación en tiempo real
+2. **ChatsModule**: CRUD de chats
+3. **MensajesModule**: Gestión de mensajes
+4. **PublicacionModule**: Manejo de publicaciones generadas
+5. **PrismaModule**: Conexión y configuración de la base de datos
+
+## 🔄 Flujo del LLM
+
+### 1. Conexión WebSocket
+
+```typescript
+// El cliente se conecta via WebSocket
+handleConnection(client: Socket) {
+  this.socketChatService.addClient(client);
+  // Notifica el número de conexiones activas
+}
+```
+
+### 2. Procesamiento del Prompt
+
+```typescript
+@SubscribeMessage('prompt')
+async handlePrompt(@MessageBody() data: { chatId: string; prompt: string })
+```
+
+**Flujo detallado:**
+
+1. **Recepción del prompt**: El usuario envía un mensaje a través del WebSocket
+2. **Persistencia del mensaje de usuario**: Se guarda en la base de datos con `emisor: 'USUARIO'`
+3. **Llamada a OpenAI API**: Se envía el prompt junto con el system prompt especializado
+4. **Streaming de respuesta**: La respuesta se transmite palabra por palabra en tiempo real
+5. **Persistencia de respuesta**: Se guarda la respuesta completa con `emisor: 'LLM'`
+
+### 3. System Prompt Especializado
+
+El sistema utiliza un prompt específico para generar publicaciones de redes sociales:
+
+```typescript
+export const systemPrompt = `Eres un asistente inteligente y servicial especializado en ayudar a los usuarios a crear publicaciones atractivas para redes sociales...`;
+```
+
+**Características del System Prompt:**
+
+- Especializado en FICCT (Facultad de Ingeniería de Ciencias de la Computación)
+- Genera contenido para múltiples plataformas
+- Respuesta estructurada en formato JSON
+- Incluye títulos, descripciones y hashtags específicos por plataforma
+
+### 4. Respuesta Estructurada
+
+El LLM devuelve un JSON con el siguiente formato:
+
+```json
+{
+  "facebook": {
+    "titulo": "string",
+    "descripcion": "string",
+    "hashtags": ["string"]
+  },
+  "instagram": {
+    "titulo": "string",
+    "descripcion": "string",
+    "hashtags": ["string"]
+  },
+  "whatsapp": {
+    "titulo": "string"
+  },
+  "tiktok": {
+    "titulo": "string",
+    "hashtags": ["string"]
+  },
+  "linkedin": {
+    "titulo": "string",
+    "descripcion": "string"
+  }
+}
+```
+
+## 🔑 Configuración de OpenAI API Key
+
+### 1. Variables de Entorno
+
+Crea un archivo `.env` en la raíz del proyecto:
+
+```env
+# OpenAI Configuration
+OPENAI_API_KEY=tu_api_key_aqui
+
+# Database Configuration
+DATABASE_URL="postgresql://usuario:password@localhost:5432/nombre_db"
+
+# Server Configuration
+PORT=4000
+```
+
+### 2. Configuración en el Código
+
+La API key se configura automáticamente en el constructor del WebSocket Gateway:
+
+```typescript
+// Crear instancia de OpenAI con API key
+client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+```
+
+### 3. Obtener tu API Key de OpenAI
+
+1. Ve a [OpenAI Platform](https://platform.openai.com/)
+2. Crea una cuenta o inicia sesión
+3. Navega a **API Keys** en tu dashboard
+4. Haz clic en **"Create new secret key"**
+5. Copia la clave y guárdala de forma segura
+6. Agrega la clave a tu archivo `.env`
+
+⚠️ **Importante**:
+
+- Nunca expongas tu API key en el código fuente
+- Manténla en variables de entorno
+- No la subas a repositorios públicos
+- Considera usar límites de uso y monitoreo de costos
+
+## 📦 Instalación
+
+### Prerrequisitos
+
+- Node.js (v18 o superior)
+- PostgreSQL
+- npm o yarn
+
+### Pasos de Instalación
+
+1. **Clonar el repositorio**
+
+```bash
+git clone [URL_DEL_REPOSITORIO]
+cd backend-llm
+```
+
+2. **Instalar dependencias**
+
+```bash
+npm install
+```
+
+3. **Configurar variables de entorno**
+
+```bash
+cp .env.example .env
+# Editar el archivo .env con tus configuraciones
+```
+
+4. **Configurar la base de datos**
+
+```bash
+# Generar el cliente de Prisma
+npx prisma generate
+
+# Ejecutar migraciones
+npx prisma migrate dev
+```
+
+5. **Iniciar el servidor**
+
+```bash
+# Desarrollo
+npm run start:dev
+
+# Producción
+npm run build
+npm run start:prod
+```
+
+## 🚀 Uso
+
+### Conectarse al WebSocket
+
+```javascript
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:4000');
+
+// Enviar un prompt
+socket.emit('prompt', {
+  chatId: 'uuid-del-chat',
+  prompt: 'Crea una publicación sobre el nuevo curso de JavaScript en la FICCT',
+});
+
+// Escuchar respuestas en tiempo real
+socket.on('prompt-response', (data) => {
+  console.log('Respuesta:', data.respuesta);
+});
+```
+
+### API REST Endpoints
+
+```bash
+# Chats
+GET    /api/chats           # Obtener todos los chats
+POST   /api/chats           # Crear nuevo chat
+GET    /api/chats/:id       # Obtener chat específico
+PUT    /api/chats/:id       # Actualizar chat
+DELETE /api/chats/:id       # Eliminar chat
+
+# Mensajes
+GET    /api/mensajes        # Obtener todos los mensajes
+POST   /api/mensajes        # Crear nuevo mensaje
+GET    /api/mensajes/:id    # Obtener mensaje específico
+
+# Publicaciones
+GET    /api/publicacion     # Obtener todas las publicaciones
+POST   /api/publicacion     # Crear nueva publicación
+```
+
+## 🔧 Configuración Adicional
+
+### Soporte para Ollama (Alternativa Local)
+
+El proyecto también incluye soporte para Ollama como alternativa local a OpenAI:
+
+```typescript
+// Crear instancia de Ollama sin API key
+ollama = new Ollama();
+
+// Uso (comentado en el código actual)
+const response = await this.ollama.chat({
+  model: 'gpt-oss:120b-cloud',
+  messages: [{ role: 'user', content: data.prompt }],
+  stream: true,
+});
+```
+
+### CORS Configuration
+
+```typescript
+app.enableCors({
+  origin: ['http://localhost:3000'],
+  credentials: true,
+});
+```
+
+## 📊 Base de Datos
+
+### Modelo de Datos
+
+```prisma
+model Chat {
+  id            String        @id @default(uuid())
+  nombre        String
+  mensajes      Mensaje[]
+  publicaciones Publicacion[]
+  // ...timestamps
+}
+
+model Mensaje {
+  id        String @id @default(uuid())
+  contenido String
+  emisor    Emisor  // USUARIO | LLM
+  chatId    String
+  chat      Chat   @relation(fields: [chatId], references: [id])
+  // ...timestamps
+}
+
+model Publicacion {
+  id         String @id @default(uuid())
+  titulo     String
+  link       String
+  plataforma String
+  chatId     String
+  // ...timestamps
+}
+```
+
+## 🛠️ Scripts Disponibles
+
+```bash
+npm run build          # Compilar para producción
+npm run start          # Iniciar servidor
+npm run start:dev      # Iniciar en modo desarrollo
+npm run start:debug    # Iniciar con debugger
+npm run lint           # Ejecutar linter
+npm run test           # Ejecutar tests
+npm run test:watch     # Tests en modo watch
+npm run test:cov       # Tests con coverage
+```
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia UNLICENSED - ver el archivo [LICENSE](LICENSE) para más detalles.
+
+## 🏫 Acerca del Proyecto
+
+Este sistema fue desarrollado para la **Facultad de Ingeniería de Ciencias de la Computación (FICCT)** de la **Universidad Autónoma Gabriel René Moreno** en Santa Cruz de la Sierra, Bolivia, con el objetivo de automatizar y optimizar la creación de contenido para redes sociales institucionales.
+
+---
+
+**Desarrollado con ❤️ para la FICCT - UAGRM**
 
 ## Description
 
