@@ -1,4 +1,5 @@
 export interface CreateContainerDto {
-  imageUrl: string;
+  image_url: string;
   caption: string;
+  media_type?: string;
 }

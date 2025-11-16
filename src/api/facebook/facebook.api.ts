@@ -30,9 +30,13 @@ export const sendFacebookMessage = async (sendMessageDto: SendMessageDto) => {
 export const sendFacebookImage = async (sendImageDto: SendImageDto) => {
   try {
     const response = await facebookApi.post(
-      `${facebookPageId}/photos?url=${sendImageDto.imageUrl}&caption=${
-        sendImageDto.caption
+      `${facebookPageId}/photos?
       }&access_token=${facebookPageAccessToken}`,
+      {
+        //BODY
+        url: sendImageDto.imageUrl,
+        caption: sendImageDto.caption,
+      },
     );
     return response.data;
   } catch (error) {

@@ -6,7 +6,7 @@ import { PublishContainerDto } from './dto/publish-container.dto';
 export const instagramUrl = 'https://graph.facebook.com/v24.0';
 
 //EL TOKEN EXPIRA ASI QUE HAY QUE CAMBIARLO CADA CIERTO TIEMPO
-export const instagramPageAccessToken = process.env.IG_PAGE_ACCESS_TOKEN || '';
+export const instagramPageAccessToken = process.env.IG_ACCESS_TOKEN || '';
 export const instagramUserId = process.env.IG_USER_ID || '';
 
 axios.createInstance(instagramUrl);
@@ -47,6 +47,26 @@ export const publishInstagramImage = async (
     return response.data;
   } catch (error) {
     console.error('Error al publicar imagen en Instagram:', error);
+    throw error;
+  }
+};
+
+// FLUJO COMPLETO
+export const postImageToInstagram = async (
+  createContainerDto: CreateContainerDto,
+) => {
+  try {
+    // 1. Crear contenedor
+    const contenedor = await sendInstagramImage(createContainerDto);
+
+    // 2. Publicar contenedor
+    const publicacion = await publishInstagramImage({
+      creation_id: contenedor.id,
+    });
+
+    return publicacion;
+  } catch (error) {
+    console.error('Error en el flujo de publicación en Instagram:', error);
     throw error;
   }
 };

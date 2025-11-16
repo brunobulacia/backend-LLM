@@ -1,3 +1,3 @@
 export interface PublishContainerDto {
-  creationId: string;
+  creation_id: string;
 }

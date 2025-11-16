@@ -4,6 +4,7 @@ import { PublicacionModule } from './publicacion/publicacion.module';
 import { MensajesModule } from './mensajes/mensajes.module';
 import { ChatsModule } from './chats/chats.module';
 import { ImagesModule } from './images/images.module';
+import { RedesSocialesModule } from './redes-sociales/redes-sociales.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { ImagesModule } from './images/images.module';
     MensajesModule,
     ChatsModule,
     ImagesModule,
+    RedesSocialesModule,
   ],
   controllers: [],
   providers: [],

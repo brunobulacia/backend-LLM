@@ -9,13 +9,19 @@ import {
 import { SocketChatService } from './socket-chat.service';
 import { Server, Socket } from 'socket.io';
 import { MensajesService } from 'src/mensajes/mensajes.service';
-import { systemPrompt } from './system-prompts/publicaciones.prompt';
-
 //PARA MANEJAR LAS IMAGENES QUE SE VAYAN GENERANDO
-import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
+import { promises as fs, writeFileSync } from 'fs';
 
 //IMPORT PARA OPENAI
 import OpenAI from 'openai';
+import { systemPrompt } from './system-prompts/publicaciones.prompt';
+
+// IMPORT PARA REDES SOCIALES
+import {
+  RedesSocialesService,
+  ContenidoRedesSociales,
+} from '../redes-sociales/redes-sociales.service';
 
 @WebSocketGateway({
   cors: {
@@ -31,6 +37,7 @@ export class SocketChatGateway
   constructor(
     private readonly socketChatService: SocketChatService,
     private readonly mensajesService: MensajesService,
+    private readonly redesSocialesService: RedesSocialesService,
   ) {}
 
   //CREAR INSTANCIA DE OPENAI CON API KEY
@@ -139,13 +146,49 @@ export class SocketChatGateway
       }
     }
 
+    // Detectar si el contenido es JSON de redes sociales
+    const isContenidoRedesSociales = this.esContenidoRedesSociales(message);
+
+    let tipoContenido = 'TEXTO';
+    let contenidoRedesSociales = null;
+    let estadoPublicacion: string | null = null;
+
+    if (isContenidoRedesSociales) {
+      tipoContenido = 'CONTENIDO_REDES_SOCIALES';
+      try {
+        contenidoRedesSociales = JSON.parse(message);
+        estadoPublicacion = 'PENDIENTE_CONFIRMACION';
+
+        // Enviar evento especial para contenido de redes sociales
+        this.wss.emit('social-content-generated', {
+          chatId: chatId,
+          contenido: contenidoRedesSociales,
+          requiereImagen: true,
+        });
+      } catch (error) {
+        console.error('Error parseando JSON de redes sociales:', error);
+        tipoContenido = 'TEXTO';
+      }
+    }
+
     // Guardar el mensaje del LLM en la base de datos
-    await this.mensajesService.create({
+    const mensajeGuardado = await this.mensajesService.create({
       contenido: message,
       chatId: chatId,
       emisor: 'LLM',
-      tipo: 'TEXTO',
+      tipo: tipoContenido as any,
+      contenidoRedesSociales,
+      estadoPublicacion: estadoPublicacion as any,
     });
+
+    // Si es contenido de redes sociales, generar imagen automáticamente
+    if (isContenidoRedesSociales) {
+      await this.generarImagenParaRedesSociales(
+        mensajeGuardado.id,
+        prompt,
+        chatId,
+      );
+    }
   }
 
   private async handleImageGeneration(chatId: string, prompt: string) {
@@ -198,7 +241,7 @@ export class SocketChatGateway
             const imagePath = `uploads/images/${filename}`;
 
             // Guardar la imagen
-            fs.writeFileSync(imagePath, imageBuffer);
+            writeFileSync(imagePath, imageBuffer);
 
             console.log(
               `Imagen generada exitosamente con ${modelInfo.name}: ${imagePath}`,
@@ -289,5 +332,194 @@ export class SocketChatGateway
 
     // Generar imagen
     await this.handleImageGeneration(data.chatId, data.prompt);
+  }
+
+  // Endpoint para confirmar y publicar contenido en redes sociales
+  @SubscribeMessage('confirm-social-publish')
+  async handleSocialPublish(
+    @MessageBody() data: { mensajeId: string; chatId: string },
+    client: Socket,
+  ) {
+    console.log(
+      '🚀 Iniciando publicación en redes sociales para mensaje:',
+      data.mensajeId,
+    );
+
+    try {
+      // Obtener el mensaje con el contenido de redes sociales
+      const mensaje = await this.mensajesService.findOne(data.mensajeId);
+
+      if (
+        !mensaje ||
+        !mensaje.contenidoRedesSociales ||
+        mensaje.tipo !== 'CONTENIDO_REDES_SOCIALES'
+      ) {
+        throw new Error('Mensaje no válido para publicación en redes sociales');
+      }
+
+      // Actualizar estado a CONFIRMADO
+      await this.mensajesService.update(data.mensajeId, {
+        estadoPublicacion: 'CONFIRMADO',
+      });
+
+      // Notificar inicio de publicación
+      this.wss.emit('social-publish-start', {
+        chatId: data.chatId,
+        mensajeId: data.mensajeId,
+      });
+
+      // Publicar en todas las redes sociales
+      const resultados =
+        await this.redesSocialesService.publicarEnTodasLasRedes(
+          data.mensajeId,
+          mensaje.contenidoRedesSociales as unknown as ContenidoRedesSociales,
+          mensaje.imagenGenerada || undefined,
+        );
+
+      // Enviar resultados al cliente
+      this.wss.emit('social-publish-complete', {
+        chatId: data.chatId,
+        mensajeId: data.mensajeId,
+        resultados: resultados,
+      });
+    } catch (error) {
+      console.error('Error publicando en redes sociales:', error);
+
+      // Actualizar estado a ERROR
+      await this.mensajesService.update(data.mensajeId, {
+        estadoPublicacion: 'ERROR',
+      });
+
+      this.wss.emit('social-publish-error', {
+        chatId: data.chatId,
+        mensajeId: data.mensajeId,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Detecta si un mensaje contiene JSON válido para redes sociales
+   */
+  private esContenidoRedesSociales(mensaje: string): boolean {
+    try {
+      const json = JSON.parse(mensaje);
+
+      // Verificar que tenga la estructura esperada
+      return (
+        json.facebook &&
+        typeof json.facebook.caption === 'string' &&
+        json.instagram &&
+        typeof json.instagram.caption === 'string' &&
+        json.linkedin &&
+        typeof json.linkedin.caption === 'string' &&
+        json.whatsapp &&
+        typeof json.whatsapp.titulo === 'string' &&
+        json.tiktok &&
+        typeof json.tiktok.titulo === 'string' &&
+        Array.isArray(json.tiktok.hashtags)
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Genera una imagen específica para acompañar el contenido de redes sociales
+   */
+  private async generarImagenParaRedesSociales(
+    mensajeId: string,
+    promptOriginal: string,
+    chatId: string,
+  ) {
+    console.log('🎨 Generando imagen para redes sociales...');
+
+    // Crear prompt optimizado para redes sociales de la FICCT
+    const promptImagen = `Crea una imagen profesional y atractiva para redes sociales de la Facultad de Ingeniería de Ciencias de la Computación y Telecomunicaciones (FICCT) relacionada con: ${promptOriginal}. La imagen debe ser visualmente moderna, tecnológica y apropiada para publicar en Facebook, Instagram y LinkedIn. Colores institucionales y elementos relacionados con tecnología, computación y telecomunicaciones.`;
+
+    this.wss.emit('social-image-generation-start', {
+      chatId: chatId,
+      mensajeId: mensajeId,
+      message: 'Generando imagen para redes sociales...',
+    });
+
+    const imageModels = [
+      {
+        name: 'dall-e-3',
+        config: {
+          model: 'dall-e-3' as const,
+          prompt: promptImagen,
+          n: 1,
+          size: '1024x1024' as const,
+          quality: 'standard' as const,
+          response_format: 'b64_json' as const,
+        },
+      },
+      {
+        name: 'dall-e-2',
+        config: {
+          model: 'dall-e-2' as const,
+          prompt: promptImagen,
+          n: 1,
+          size: '1024x1024' as const,
+          response_format: 'b64_json' as const,
+        },
+      },
+    ];
+
+    let lastError: any = null;
+
+    for (const modelInfo of imageModels) {
+      try {
+        console.log(`🎨 Intentando generar imagen con ${modelInfo.name}...`);
+
+        const response = await this.client.images.generate(modelInfo.config);
+
+        if (response.data && response.data.length > 0) {
+          const imageData = response.data[0];
+          if (imageData.b64_json) {
+            // Procesar y guardar imagen
+            const imageBuffer = Buffer.from(imageData.b64_json, 'base64');
+            const filename = `social_${mensajeId}_${Date.now()}.png`;
+            const imagePath = `uploads/images/${filename}`;
+
+            // Asegurar que el directorio existe
+            await fs.mkdir('uploads/images', { recursive: true });
+            writeFileSync(imagePath, imageBuffer);
+
+            console.log(`✅ Imagen para redes sociales guardada: ${filename}`);
+
+            // Actualizar el mensaje con la ruta de la imagen
+            await this.mensajesService.update(mensajeId, {
+              imagenGenerada: filename,
+            });
+
+            // Notificar que la imagen está lista
+            this.wss.emit('social-image-generation-complete', {
+              chatId: chatId,
+              mensajeId: mensajeId,
+              imageUrl: `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/images/${filename}`,
+              modelUsed: modelInfo.name,
+              revisedPrompt: imageData.revised_prompt,
+            });
+
+            return; // Éxito, salir del método
+          }
+        }
+        throw new Error('No se recibió data de imagen válida');
+      } catch (error) {
+        console.error(`Error generando imagen con ${modelInfo.name}:`, error);
+        lastError = error;
+        continue; // Intentar con el siguiente modelo
+      }
+    }
+
+    // Si llegamos aquí, ningún modelo funcionó
+    console.error('Error generando imagen para redes sociales:', lastError);
+    this.wss.emit('social-image-generation-error', {
+      chatId: chatId,
+      mensajeId: mensajeId,
+      error: 'Error al generar la imagen para redes sociales',
+    });
   }
 }

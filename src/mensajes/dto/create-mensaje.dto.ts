@@ -1,4 +1,9 @@
-import { Mensaje, Emisor, TipoContenido } from '@prisma/client';
+import {
+  Mensaje,
+  Emisor,
+  TipoContenido,
+  EstadoPublicacion,
+} from '@prisma/client';
 
 export interface CreateMensajeDto {
   contenido: string;
@@ -6,4 +11,7 @@ export interface CreateMensajeDto {
   chatId: string;
   tipo?: TipoContenido;
   rutaImagen?: string;
+  contenidoRedesSociales?: any; // JSON con contenido para redes sociales
+  estadoPublicacion?: EstadoPublicacion;
+  imagenGenerada?: string; // Ruta de imagen generada para redes sociales
 }

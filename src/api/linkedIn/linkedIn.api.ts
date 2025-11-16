@@ -40,7 +40,7 @@ export const registrarSubida =
       const registrarSubidaDto: RegistrarSubidaDto = {
         registerUploadRequest: {
           recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-          owner: urnPerson,
+          owner: `urn:li:person:${urnPerson}`, // Formato correcto del URN
           serviceRelationships: [
             {
               relationshipType: 'OWNER',
@@ -50,8 +50,9 @@ export const registrarSubida =
         },
       };
 
+      // Endpoint correcto según la documentación de LinkedIn API v2
       const response = await linkedInApi.post(
-        '/media/upload',
+        '/assets?action=registerUpload',
         registrarSubidaDto,
         {
           headers: {
@@ -81,6 +82,7 @@ export const subirImagenUploadUrl = async (uploadUrl: string, image: File) => {
     const response = await uploadApi.put('', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${linkedInToken}`,
       },
     });
 
@@ -124,7 +126,7 @@ export const subirImagenUploadUrlNativo = async (
 export const publishImage = async (caption: string, asset: string) => {
   try {
     let imageAssetDto: ImageAssetDto = {
-      author: urnPerson,
+      author: `urn:li:person:${urnPerson}`, // Formato correcto del URN
       lifecycleState: 'PUBLISHED',
       specificContent: {
         'com.linkedin.ugc.ShareContent': {

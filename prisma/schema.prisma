@@ -21,6 +21,15 @@ enum Emisor {
 enum TipoContenido {
   TEXTO
   IMAGEN
+  CONTENIDO_REDES_SOCIALES
+}
+
+enum EstadoPublicacion {
+  PENDIENTE_CONFIRMACION
+  CONFIRMADO
+  PUBLICANDO
+  PUBLICADO
+  ERROR
 }
 
 model Mensaje {
@@ -31,6 +40,14 @@ model Mensaje {
   emisor     Emisor
   chatId     String
   chat       Chat          @relation(fields: [chatId], references: [id])
+
+  // Campos para contenido de redes sociales
+  contenidoRedesSociales Json? // Almacena el JSON con el contenido para cada red social
+  estadoPublicacion      EstadoPublicacion?
+  imagenGenerada         String? // Ruta de la imagen generada por DALL-E para redes sociales
+
+  // Relación con publicaciones
+  publicaciones Publicacion[]
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -49,12 +66,18 @@ model Chat {
 }
 
 model Publicacion {
-  id         String @id @default(uuid())
+  id         String            @id @default(uuid())
   titulo     String
-  link       String
-  plataforma String
+  link       String?
+  plataforma String // facebook, instagram, linkedin
+  postId     String? // ID del post en la red social
+  caption    String // El caption específico para esta red social
+  imagenUrl  String? // URL de la imagen publicada
+  mensajeId  String? // Referencia al mensaje que generó esta publicación
+  mensaje    Mensaje?          @relation(fields: [mensajeId], references: [id])
   chatId     String
-  chat       Chat   @relation(fields: [chatId], references: [id])
+  chat       Chat              @relation(fields: [chatId], references: [id])
+  estado     EstadoPublicacion @default(PENDIENTE_CONFIRMACION)
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
