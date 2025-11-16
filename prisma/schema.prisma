@@ -18,12 +18,19 @@ enum Emisor {
   LLM
 }
 
+enum TipoContenido {
+  TEXTO
+  IMAGEN
+}
+
 model Mensaje {
-  id        String @id @default(uuid())
-  contenido String
-  emisor    Emisor
-  chatId    String
-  chat      Chat   @relation(fields: [chatId], references: [id])
+  id         String        @id @default(uuid())
+  contenido  String
+  tipo       TipoContenido @default(TEXTO)
+  rutaImagen String? // Para almacenar la ruta de la imagen si el tipo es IMAGEN
+  emisor     Emisor
+  chatId     String
+  chat       Chat          @relation(fields: [chatId], references: [id])
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())

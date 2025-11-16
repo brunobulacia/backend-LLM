@@ -12,6 +12,9 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Docs
+/docs
+
 # OS
 .DS_Store
 
@@ -45,6 +48,9 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+/uploads
+/prisma/migrations
+
 
 # Runtime data
 pids

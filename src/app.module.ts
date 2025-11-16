@@ -3,9 +3,16 @@ import { SocketChatModule } from './socket-chat/socket-chat.module';
 import { PublicacionModule } from './publicacion/publicacion.module';
 import { MensajesModule } from './mensajes/mensajes.module';
 import { ChatsModule } from './chats/chats.module';
+import { ImagesModule } from './images/images.module';
 
 @Module({
-  imports: [SocketChatModule, PublicacionModule, MensajesModule, ChatsModule],
+  imports: [
+    SocketChatModule,
+    PublicacionModule,
+    MensajesModule,
+    ChatsModule,
+    ImagesModule,
+  ],
   controllers: [],
   providers: [],
 })

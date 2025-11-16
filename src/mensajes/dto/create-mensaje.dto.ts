@@ -1,6 +1,9 @@
-import { Mensaje } from '@prisma/client';
+import { Mensaje, Emisor, TipoContenido } from '@prisma/client';
 
-export type CreateMensajeDto = Omit<
-  Mensaje,
-  'id' | 'isActive' | 'createdAt' | 'updatedAt'
->;
+export interface CreateMensajeDto {
+  contenido: string;
+  emisor: Emisor;
+  chatId: string;
+  tipo?: TipoContenido;
+  rutaImagen?: string;
+}
