@@ -490,8 +490,21 @@ export class SocketChatGateway
             console.log(`✅ Imagen para redes sociales guardada: ${filename}`);
 
             // Actualizar el mensaje con la ruta de la imagen
-            await this.mensajesService.update(mensajeId, {
-              imagenGenerada: filename,
+            console.log(
+              `🔄 Actualizando mensaje ${mensajeId} con imagen: ${filename}`,
+            );
+            const mensajeActualizado = await this.mensajesService.update(
+              mensajeId,
+              {
+                rutaImagen: filename, // Para persistencia y compatibilidad
+                imagenGenerada: filename, // Para el sistema de redes sociales
+              },
+            );
+            console.log(`✅ Mensaje actualizado:`, {
+              id: mensajeActualizado.id,
+              rutaImagen: mensajeActualizado.rutaImagen,
+              imagenGenerada: mensajeActualizado.imagenGenerada,
+              tipo: mensajeActualizado.tipo,
             });
 
             // Notificar que la imagen está lista

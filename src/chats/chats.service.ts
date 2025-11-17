@@ -11,7 +11,7 @@ export class ChatsService {
   }
 
   findAll() {
-    return this.prismaService.chat.findMany();
+    return this.prismaService.chat.findMany({ where: { isActive: true } });
   }
 
   findOne(id: string) {
@@ -26,6 +26,9 @@ export class ChatsService {
   }
 
   remove(id: string) {
-    return this.prismaService.chat.delete({ where: { id } });
+    return this.prismaService.chat.update({
+      where: { id },
+      data: { isActive: false },
+    });
   }
 }

@@ -31,9 +31,25 @@ export class MensajesService {
 
   //GET MENSAJES BY CHAT ID
   async findByChatId(chatId: string) {
-    return this.prismaService.mensaje.findMany({
+    console.log(`🔍 [DEBUG] Buscando mensajes para chat: ${chatId}`);
+    const mensajes = await this.prismaService.mensaje.findMany({
       where: { chatId },
       orderBy: { createdAt: 'asc' },
     });
+
+    console.log(`📋 [DEBUG] Mensajes encontrados: ${mensajes.length}`);
+    mensajes.forEach((msg, index) => {
+      if (msg.tipo === 'CONTENIDO_REDES_SOCIALES') {
+        console.log(`📱 [DEBUG] Mensaje ${index + 1} (SOCIAL):`, {
+          id: msg.id,
+          tipo: msg.tipo,
+          rutaImagen: msg.rutaImagen,
+          imagenGenerada: msg.imagenGenerada,
+          contenido: msg.contenido.substring(0, 50) + '...',
+        });
+      }
+    });
+
+    return mensajes;
   }
 }
