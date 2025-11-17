@@ -59,7 +59,12 @@ export class RedesSocialesService {
         'images',
         rutaImagen,
       );
+      console.log('🔄 [SERVICIO] Verificando imagen:', rutaImagen);
+      console.log('🔄 [SERVICIO] Ruta completa:', fullPath);
+
       if (fs.existsSync(fullPath)) {
+        console.log('✅ [SERVICIO] Imagen encontrada');
+
         // Para LinkedIn necesitamos un File object
         const buffer = fs.readFileSync(fullPath);
         const blob = new Blob([buffer]);
@@ -67,8 +72,14 @@ export class RedesSocialesService {
           type: 'image/png',
         });
 
-        // URL para Facebook e Instagram
+        // URL para Facebook e Instagram usando la imagen generada localmente
         imagenUrl = `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/images/${rutaImagen}`;
+        console.log(
+          '🔄 [SERVICIO] URL generada para redes sociales:',
+          imagenUrl,
+        );
+      } else {
+        console.log('❌ [SERVICIO] Imagen no encontrada en:', fullPath);
       }
     }
 
@@ -106,12 +117,20 @@ export class RedesSocialesService {
     // Publicar en Instagram
     try {
       if (imagenUrl) {
+        console.log('🔄 [SERVICIO] Iniciando publicación en Instagram...');
+        console.log('🔄 [SERVICIO] Image URL:', imagenUrl);
+        console.log('🔄 [SERVICIO] Caption:', contenido.instagram.caption);
+
         // Usar la nueva función que combina crear contenedor y publicar
         const publicacion = await postImageToInstagram({
           image_url: imagenUrl,
           caption: contenido.instagram.caption,
-          media_type: 'IMAGE',
         });
+
+        console.log(
+          '🔄 [SERVICIO] Publicación Instagram completada:',
+          publicacion,
+        );
 
         resultados.push({
           plataforma: 'instagram',

@@ -133,7 +133,7 @@ export class SocketChatGateway
       if (event.type === 'response.output_text.delta') {
         const textDelta = event.delta || '';
         message += textDelta;
-        console.log(message);
+        // console.log(message);
         this.wss.emit('prompt-response', {
           type: 'text',
           respuesta: message,

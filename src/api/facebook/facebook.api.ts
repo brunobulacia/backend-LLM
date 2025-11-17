@@ -6,7 +6,7 @@ import { SendImageDto } from './dto/send-image.dto';
 const facebookUrl = 'https://graph.facebook.com/v24.0';
 
 //EL TOKEN EXPIRA ASI QUE HAY QUE CAMBIARLO CADA CIERTO TIEMPO
-const facebookPageAccessToken = process.env.FB_PAGE_ACCESS_TOKEN || '';
+const metaAccessToken = process.env.META_ACCESS_TOKEN || '';
 const facebookPageId = process.env.FB_PAGE_ID || '';
 
 axios.createInstance(facebookUrl);
@@ -17,7 +17,7 @@ export const facebookApi = axios.getInstance(facebookUrl);
 export const sendFacebookMessage = async (sendMessageDto: SendMessageDto) => {
   try {
     const response = await facebookApi.post(
-      `/${facebookPageId}/feed?message=${sendMessageDto.message}&access_token=${facebookPageAccessToken}`,
+      `/${facebookPageId}/feed?message=${sendMessageDto.message}&access_token=${metaAccessToken}`,
     );
     return response.data;
   } catch (error) {
@@ -30,8 +30,7 @@ export const sendFacebookMessage = async (sendMessageDto: SendMessageDto) => {
 export const sendFacebookImage = async (sendImageDto: SendImageDto) => {
   try {
     const response = await facebookApi.post(
-      `${facebookPageId}/photos?
-      }&access_token=${facebookPageAccessToken}`,
+      `${facebookPageId}/photos?access_token=${metaAccessToken}`,
       {
         //BODY
         url: sendImageDto.imageUrl,
