@@ -507,11 +507,11 @@ export class SocketChatGateway
               tipo: mensajeActualizado.tipo,
             });
 
-            // Notificar que la imagen está lista
+            // Notificar que la imagen está lista - usar localhost para el frontend
             this.wss.emit('social-image-generation-complete', {
               chatId: chatId,
               mensajeId: mensajeId,
-              imageUrl: `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/images/${filename}`,
+              imageUrl: `http://localhost:4000/api/images/${filename}`,
               modelUsed: modelInfo.name,
               revisedPrompt: imageData.revised_prompt,
             });
