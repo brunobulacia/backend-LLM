@@ -5,6 +5,7 @@ import {
   WebSocketServer,
   OnGatewayDisconnect,
   OnGatewayConnection,
+  ConnectedSocket,
 } from '@nestjs/websockets';
 import { SocketChatService } from './socket-chat.service';
 import { Server, Socket } from 'socket.io';
@@ -18,6 +19,7 @@ import OpenAI from 'openai';
 import { systemPrompt } from './system-prompts/publicaciones.prompt';
 
 // IMPORT PARA REDES SOCIALES
+import { PublicationLogger } from '../utils/publication-logger';
 import {
   RedesSocialesService,
   ContenidoRedesSociales,
@@ -64,7 +66,7 @@ export class SocketChatGateway
   async handlePrompt(
     @MessageBody()
     data: { chatId: string; prompt: string; type?: 'text' | 'image' },
-    client: Socket,
+    @ConnectedSocket() client: Socket,
   ) {
     console.log('Chat ID:', data.chatId);
     console.log('Prompt recibido del cliente:', data.prompt);
@@ -317,7 +319,7 @@ export class SocketChatGateway
   @SubscribeMessage('generate-image')
   async handleImagePrompt(
     @MessageBody() data: { chatId: string; prompt: string },
-    client: Socket,
+    @ConnectedSocket() client: Socket,
   ) {
     console.log('Chat ID:', data.chatId);
     console.log('Prompt de imagen recibido del cliente:', data.prompt);
@@ -338,14 +340,33 @@ export class SocketChatGateway
   @SubscribeMessage('confirm-social-publish')
   async handleSocialPublish(
     @MessageBody() data: { mensajeId: string; chatId: string },
-    client: Socket,
+    @ConnectedSocket() client: Socket,
   ) {
-    console.log(
-      '🚀 Iniciando publicación en redes sociales para mensaje:',
+    // Validar que tenemos los datos necesarios
+    if (!data || !data.mensajeId || !data.chatId) {
+      const error = 'Datos de mensaje inválidos';
+      PublicationLogger.logError('unknown', 'WEBSOCKET', error, { data });
+      throw new Error(error);
+    }
+
+    PublicationLogger.logInfo(
       data.mensajeId,
+      'WEBSOCKET',
+      'Recibida confirmación de publicación',
+      {
+        chatId: data.chatId,
+        clientId: client?.id || 'unknown',
+        clientConnected: !!client,
+      },
     );
 
     try {
+      PublicationLogger.logInfo(
+        data.mensajeId,
+        'WEBSOCKET',
+        'Obteniendo mensaje de la base de datos',
+      );
+
       // Obtener el mensaje con el contenido de redes sociales
       const mensaje = await this.mensajesService.findOne(data.mensajeId);
 
@@ -354,21 +375,55 @@ export class SocketChatGateway
         !mensaje.contenidoRedesSociales ||
         mensaje.tipo !== 'CONTENIDO_REDES_SOCIALES'
       ) {
+        PublicationLogger.logError(
+          data.mensajeId,
+          'WEBSOCKET',
+          'Mensaje no válido para publicación',
+          {
+            tieneContenido: !!mensaje?.contenidoRedesSociales,
+            tipo: mensaje?.tipo,
+          },
+        );
         throw new Error('Mensaje no válido para publicación en redes sociales');
       }
 
+      PublicationLogger.logSuccess(
+        data.mensajeId,
+        'WEBSOCKET',
+        'Mensaje válido encontrado',
+        {
+          tipo: mensaje.tipo,
+          tieneImagen: !!mensaje.imagenGenerada,
+        },
+      );
+
       // Actualizar estado a CONFIRMADO
+      PublicationLogger.logInfo(
+        data.mensajeId,
+        'WEBSOCKET',
+        'Actualizando estado a CONFIRMADO',
+      );
       await this.mensajesService.update(data.mensajeId, {
         estadoPublicacion: 'CONFIRMADO',
       });
 
       // Notificar inicio de publicación
+      PublicationLogger.logInfo(
+        data.mensajeId,
+        'WEBSOCKET',
+        'Enviando notificación de inicio al cliente',
+      );
       this.wss.emit('social-publish-start', {
         chatId: data.chatId,
         mensajeId: data.mensajeId,
       });
 
       // Publicar en todas las redes sociales
+      PublicationLogger.logInfo(
+        data.mensajeId,
+        'WEBSOCKET',
+        'Iniciando proceso de publicación en redes sociales',
+      );
       const resultados =
         await this.redesSocialesService.publicarEnTodasLasRedes(
           data.mensajeId,
@@ -377,18 +432,40 @@ export class SocketChatGateway
         );
 
       // Enviar resultados al cliente
+      PublicationLogger.logSuccess(
+        data.mensajeId,
+        'WEBSOCKET',
+        'Publicación completada, enviando resultados al cliente',
+        {
+          totalResultados: resultados.length,
+          exitosos: resultados.filter((r) => r.exito).length,
+          fallidos: resultados.filter((r) => !r.exito).length,
+        },
+      );
+
       this.wss.emit('social-publish-complete', {
         chatId: data.chatId,
         mensajeId: data.mensajeId,
         resultados: resultados,
       });
     } catch (error) {
-      console.error('Error publicando en redes sociales:', error);
+      PublicationLogger.logError(
+        data.mensajeId,
+        'WEBSOCKET',
+        'Error general en el proceso de publicación',
+        error,
+      );
 
       // Actualizar estado a ERROR
       await this.mensajesService.update(data.mensajeId, {
         estadoPublicacion: 'ERROR',
       });
+
+      PublicationLogger.logError(
+        data.mensajeId,
+        'WEBSOCKET',
+        'Enviando notificación de error al cliente',
+      );
 
       this.wss.emit('social-publish-error', {
         chatId: data.chatId,
@@ -432,7 +509,7 @@ export class SocketChatGateway
     promptOriginal: string,
     chatId: string,
   ) {
-    console.log('🎨 Generando imagen para redes sociales...');
+    console.log('Generando imagen para redes sociales...');
 
     // Crear prompt optimizado para redes sociales de la FICCT
     const promptImagen = `Crea una imagen profesional y atractiva para redes sociales de la Facultad de Ingeniería de Ciencias de la Computación y Telecomunicaciones (FICCT) relacionada con: ${promptOriginal}. La imagen debe ser visualmente moderna, tecnológica y apropiada para publicar en Facebook, Instagram y LinkedIn. Colores institucionales y elementos relacionados con tecnología, computación y telecomunicaciones.`;
@@ -471,7 +548,7 @@ export class SocketChatGateway
 
     for (const modelInfo of imageModels) {
       try {
-        console.log(`🎨 Intentando generar imagen con ${modelInfo.name}...`);
+        console.log(`Intentando generar imagen con ${modelInfo.name}...`);
 
         const response = await this.client.images.generate(modelInfo.config);
 
@@ -487,11 +564,11 @@ export class SocketChatGateway
             await fs.mkdir('uploads/images', { recursive: true });
             writeFileSync(imagePath, imageBuffer);
 
-            console.log(`✅ Imagen para redes sociales guardada: ${filename}`);
+            console.log(` Imagen para redes sociales guardada: ${filename}`);
 
             // Actualizar el mensaje con la ruta de la imagen
             console.log(
-              `🔄 Actualizando mensaje ${mensajeId} con imagen: ${filename}`,
+              ` Actualizando mensaje ${mensajeId} con imagen: ${filename}`,
             );
             const mensajeActualizado = await this.mensajesService.update(
               mensajeId,
@@ -500,7 +577,7 @@ export class SocketChatGateway
                 imagenGenerada: filename, // Para el sistema de redes sociales
               },
             );
-            console.log(`✅ Mensaje actualizado:`, {
+            console.log(` Mensaje actualizado:`, {
               id: mensajeActualizado.id,
               rutaImagen: mensajeActualizado.rutaImagen,
               imagenGenerada: mensajeActualizado.imagenGenerada,

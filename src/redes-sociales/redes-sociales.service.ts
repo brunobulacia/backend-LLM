@@ -9,6 +9,7 @@ import {
   publishContent,
   publicarImagenEnLinkedIn,
 } from '../api/linkedIn/linkedIn.api';
+import { PublicationLogger } from '../utils/publication-logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -42,11 +43,24 @@ export class RedesSocialesService {
   ): Promise<ResultadoPublicacion[]> {
     const resultados: ResultadoPublicacion[] = [];
 
+    // Log inicio del proceso
+    PublicationLogger.logStart(mensajeId, contenido, rutaImagen);
+
     // Actualizar estado del mensaje a PUBLICANDO
+    PublicationLogger.logInfo(
+      mensajeId,
+      'DATABASE',
+      'Actualizando estado a PUBLICANDO',
+    );
     await this.prisma.mensaje.update({
       where: { id: mensajeId },
       data: { estadoPublicacion: 'PUBLICANDO' },
     });
+    PublicationLogger.logSuccess(
+      mensajeId,
+      'DATABASE',
+      'Estado actualizado correctamente',
+    );
 
     // Preparar imagen si existe
     let imagenFile: File | undefined;
@@ -59,11 +73,17 @@ export class RedesSocialesService {
         'images',
         rutaImagen,
       );
-      console.log('🔄 [SERVICIO] Verificando imagen:', rutaImagen);
-      console.log('🔄 [SERVICIO] Ruta completa:', fullPath);
+      PublicationLogger.logInfo(mensajeId, 'IMAGE', 'Verificando imagen', {
+        rutaImagen,
+        fullPath,
+      });
 
       if (fs.existsSync(fullPath)) {
-        console.log('✅ [SERVICIO] Imagen encontrada');
+        PublicationLogger.logSuccess(
+          mensajeId,
+          'IMAGE',
+          'Imagen encontrada correctamente',
+        );
 
         // Para LinkedIn necesitamos un File object
         const buffer = fs.readFileSync(fullPath);
@@ -74,17 +94,31 @@ export class RedesSocialesService {
 
         // URL para Facebook e Instagram usando la imagen generada localmente
         imagenUrl = `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/images/${rutaImagen}`;
-        console.log(
-          '🔄 [SERVICIO] URL generada para redes sociales:',
-          imagenUrl,
+        PublicationLogger.logInfo(
+          mensajeId,
+          'IMAGE',
+          'URL generada para redes sociales',
+          { imagenUrl },
         );
       } else {
-        console.log('❌ [SERVICIO] Imagen no encontrada en:', fullPath);
+        PublicationLogger.logError(mensajeId, 'IMAGE', 'Imagen no encontrada', {
+          fullPath,
+        });
       }
     }
 
     // Publicar en Facebook
     try {
+      PublicationLogger.logInfo(
+        mensajeId,
+        'FACEBOOK',
+        'Iniciando publicación en Facebook',
+        {
+          tieneImagen: !!imagenUrl,
+          caption: contenido.facebook.caption.substring(0, 100) + '...',
+        },
+      );
+
       let facebookResult;
       if (imagenUrl) {
         facebookResult = await sendFacebookImage({
@@ -97,15 +131,33 @@ export class RedesSocialesService {
         });
       }
 
-      resultados.push({
+      const resultado = {
         plataforma: 'facebook',
         exito: true,
         postId: facebookResult?.id || 'unknown',
         link: facebookResult?.id
           ? `https://facebook.com/${facebookResult.id}`
           : 'No disponible',
-      });
+      };
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'FACEBOOK',
+        'Publicación exitosa',
+        {
+          postId: resultado.postId,
+          link: resultado.link,
+        },
+      );
+
+      resultados.push(resultado);
     } catch (error) {
+      PublicationLogger.logError(
+        mensajeId,
+        'FACEBOOK',
+        'Error en publicación',
+        error,
+      );
       console.error('Error publicando en Facebook:', error);
       resultados.push({
         plataforma: 'facebook',
@@ -117,9 +169,15 @@ export class RedesSocialesService {
     // Publicar en Instagram
     try {
       if (imagenUrl) {
-        console.log('🔄 [SERVICIO] Iniciando publicación en Instagram...');
-        console.log('🔄 [SERVICIO] Image URL:', imagenUrl);
-        console.log('🔄 [SERVICIO] Caption:', contenido.instagram.caption);
+        PublicationLogger.logInfo(
+          mensajeId,
+          'INSTAGRAM',
+          'Iniciando publicación en Instagram',
+          {
+            imageUrl: imagenUrl,
+            caption: contenido.instagram.caption.substring(0, 100) + '...',
+          },
+        );
 
         // Usar la nueva función que combina crear contenedor y publicar
         const publicacion = await postImageToInstagram({
@@ -127,20 +185,33 @@ export class RedesSocialesService {
           caption: contenido.instagram.caption,
         });
 
-        console.log(
-          '🔄 [SERVICIO] Publicación Instagram completada:',
-          publicacion,
+        PublicationLogger.logSuccess(
+          mensajeId,
+          'INSTAGRAM',
+          'Publicación completada exitosamente',
+          {
+            postId: publicacion?.id,
+            response: publicacion,
+          },
         );
 
-        resultados.push({
+        const resultado = {
           plataforma: 'instagram',
           exito: true,
           postId: publicacion?.id || 'unknown',
           link: publicacion?.id
             ? `https://instagram.com/p/${publicacion.id}`
             : 'No disponible',
-        });
+        };
+
+        resultados.push(resultado);
       } else {
+        PublicationLogger.logWarning(
+          mensajeId,
+          'INSTAGRAM',
+          'No se puede publicar sin imagen',
+        );
+
         resultados.push({
           plataforma: 'instagram',
           exito: false,
@@ -148,7 +219,13 @@ export class RedesSocialesService {
         });
       }
     } catch (error) {
-      console.error('Error publicando en Instagram:', error);
+      PublicationLogger.logError(
+        mensajeId,
+        'INSTAGRAM',
+        'Error en publicación',
+        error,
+      );
+
       resultados.push({
         plataforma: 'instagram',
         exito: false,
@@ -158,6 +235,16 @@ export class RedesSocialesService {
 
     // Publicar en LinkedIn
     try {
+      PublicationLogger.logInfo(
+        mensajeId,
+        'LINKEDIN',
+        'Iniciando publicación en LinkedIn',
+        {
+          tieneImagen: !!imagenFile,
+          caption: contenido.linkedin.caption.substring(0, 100) + '...',
+        },
+      );
+
       let linkedinResult;
       if (imagenFile) {
         linkedinResult = await publicarImagenEnLinkedIn(
@@ -184,16 +271,35 @@ export class RedesSocialesService {
         linkedinResult = await publishContent(publishDto);
       }
 
-      resultados.push({
+      const resultado = {
         plataforma: 'linkedin',
         exito: true,
         postId: linkedinResult?.id || 'unknown',
         link: linkedinResult?.id
           ? `https://linkedin.com/feed/update/${linkedinResult.id}`
           : 'No disponible',
-      });
+      };
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'LINKEDIN',
+        'Publicación exitosa',
+        {
+          postId: resultado.postId,
+          link: resultado.link,
+          response: linkedinResult,
+        },
+      );
+
+      resultados.push(resultado);
     } catch (error) {
-      console.error('Error publicando en LinkedIn:', error);
+      PublicationLogger.logError(
+        mensajeId,
+        'LINKEDIN',
+        'Error en publicación',
+        error,
+      );
+
       resultados.push({
         plataforma: 'linkedin',
         exito: false,
@@ -211,19 +317,37 @@ export class RedesSocialesService {
 
     // Actualizar estado final del mensaje
     const todoExitoso = resultados.every((r) => r.exito);
+    const estadoFinal = todoExitoso ? 'PUBLICADO' : 'ERROR';
+
+    PublicationLogger.logInfo(
+      mensajeId,
+      'DATABASE',
+      'Actualizando estado final',
+      {
+        estadoFinal,
+        todoExitoso,
+      },
+    );
+
     await this.prisma.mensaje.update({
       where: { id: mensajeId },
       data: {
-        estadoPublicacion: todoExitoso ? 'PUBLICADO' : 'ERROR',
+        estadoPublicacion: estadoFinal,
       },
     });
+
+    PublicationLogger.logSuccess(
+      mensajeId,
+      'DATABASE',
+      'Estado final actualizado correctamente',
+    );
+
+    // Log final del proceso
+    PublicationLogger.logEnd(mensajeId, resultados);
 
     return resultados;
   }
 
-  /**
-   * Guarda los resultados de las publicaciones en la base de datos
-   */
   private async guardarResultadosPublicacion(
     mensajeId: string,
     resultados: ResultadoPublicacion[],
@@ -251,6 +375,7 @@ export class RedesSocialesService {
           break;
       }
 
+      //GUARDARMOS TODOS LOS DATOS DE LA PUBLICACION EN LA BD
       await this.prisma.publicacion.create({
         data: {
           titulo: `Publicación ${resultado.plataforma}`,
