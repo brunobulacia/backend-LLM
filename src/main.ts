@@ -18,7 +18,7 @@ async function bootstrap() {
   console.log('Inicializando sistema de logging...');
   PublicationLogger.test();
 
-  await app.listen(process.env.PORT ?? 4000);
-  console.log(`Servidor corriendo en puerto ${process.env.PORT ?? 4000}`);
+  await app.listen(process.env.PORT ?? 8080);
+  console.log(`Servidor corriendo en puerto ${process.env.PORT ?? 8080}`);
 }
 bootstrap();
