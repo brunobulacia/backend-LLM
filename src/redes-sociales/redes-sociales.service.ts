@@ -311,11 +311,40 @@ export class RedesSocialesService {
 
     //Publicar story en whatsapp
     try {
+      PublicationLogger.logInfo(
+        mensajeId,
+        'WHATSAPP',
+        'Iniciando publicación en WhatsApp',
+        {
+          tieneImagen: !!imagenUrl,
+          caption: contenido.whatsapp.caption.substring(0, 100) + '...',
+        },
+      );
+
       const whatsappResult = await sendStory({
         media: imagenUrl,
         caption: contenido.whatsapp.caption,
         exclude_contacts: contactos,
       });
+
+      const resultado = {
+        plataforma: 'whatsapp',
+        exito: true,
+        postId: whatsappResult?.id || 'story',
+        link: 'WhatsApp Story publicado',
+      };
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'WHATSAPP',
+        'Story publicado exitosamente',
+        {
+          postId: resultado.postId,
+          response: whatsappResult,
+        },
+      );
+
+      resultados.push(resultado);
     } catch (error) {
       PublicationLogger.logError(
         mensajeId,
@@ -396,6 +425,9 @@ export class RedesSocialesService {
           break;
         case 'linkedin':
           caption = contenido.linkedin.caption;
+          break;
+        case 'whatsapp':
+          caption = contenido.whatsapp.caption;
           break;
       }
 
