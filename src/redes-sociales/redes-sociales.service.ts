@@ -12,12 +12,14 @@ import {
 import { PublicationLogger } from '../utils/publication-logger';
 import * as fs from 'fs';
 import * as path from 'path';
+import { contactos } from 'src/utils/contacts';
+import { sendStory } from 'src/api/whatsapp/whatsapp.api';
 
 export interface ContenidoRedesSociales {
   facebook: { caption: string };
   instagram: { caption: string };
   linkedin: { caption: string };
-  whatsapp: { titulo: string };
+  whatsapp: { caption: string };
   tiktok: { titulo: string; hashtags: string[] };
 }
 
@@ -302,6 +304,28 @@ export class RedesSocialesService {
 
       resultados.push({
         plataforma: 'linkedin',
+        exito: false,
+        error: error.message,
+      });
+    }
+
+    //Publicar story en whatsapp
+    try {
+      const whatsappResult = await sendStory({
+        media: imagenUrl,
+        caption: contenido.whatsapp.caption,
+        exclude_contacts: contactos,
+      });
+    } catch (error) {
+      PublicationLogger.logError(
+        mensajeId,
+        'WHATSAPP',
+        'Error en publicación',
+        error,
+      );
+
+      resultados.push({
+        plataforma: 'whatsapp',
         exito: false,
         error: error.message,
       });
