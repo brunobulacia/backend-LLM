@@ -6,11 +6,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'https://triter-poly-trace.ngrok-free.dev',
-      /^https:\/\/.*\.ngrok-free\.dev$/, // Permite cualquier subdominio de ngrok
-    ],
+    origin: ['*'],
     credentials: true,
   });
 
