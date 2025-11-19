@@ -25,9 +25,11 @@ import {
   ContenidoRedesSociales,
 } from '../redes-sociales/redes-sociales.service';
 
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000/api';
+
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:3000'],
+    origin: ['*'],
     credentials: true,
   },
   namespace: '/',
@@ -253,7 +255,7 @@ export class SocketChatGateway
             this.wss.emit('image-generation-complete', {
               type: 'image',
               chatId: chatId,
-              imageUrl: `http://localhost:4000/api/images/${filename}`,
+              imageUrl: `${BACKEND_URL}/images/${filename}`,
               isPartial: false,
               revisedPrompt: imageData.revised_prompt, // DALL-E a veces revisa el prompt
               modelUsed: modelInfo.name,
@@ -588,7 +590,7 @@ export class SocketChatGateway
             this.wss.emit('social-image-generation-complete', {
               chatId: chatId,
               mensajeId: mensajeId,
-              imageUrl: `http://localhost:4000/api/images/${filename}`,
+              imageUrl: `${BACKEND_URL}/images/${filename}`,
               modelUsed: modelInfo.name,
               revisedPrompt: imageData.revised_prompt,
             });
