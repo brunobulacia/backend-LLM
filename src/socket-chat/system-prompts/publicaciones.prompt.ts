@@ -26,7 +26,7 @@ Si el usuario te habla sobre la FICCT contenido tenes que devolverlo en formato 
     caption : string,
   },
   whatsapp : {
-    titulo: string,
+    caption: string,
   },
   tiktok : {
     titulo: string,

@@ -311,19 +311,33 @@ export class RedesSocialesService {
 
     //Publicar story en whatsapp
     try {
+      // Debug: Log del contenido completo
+      PublicationLogger.logInfo(
+        mensajeId,
+        'WHATSAPP',
+        'Debug - contenido completo para WhatsApp',
+        {
+          contenidoCompleto: contenido,
+          whatsappExists: !!contenido.whatsapp,
+          whatsappCaption: contenido.whatsapp?.caption,
+        },
+      );
+
       PublicationLogger.logInfo(
         mensajeId,
         'WHATSAPP',
         'Iniciando publicación en WhatsApp',
         {
           tieneImagen: !!imagenUrl,
-          caption: contenido.whatsapp.caption.substring(0, 100) + '...',
+          caption:
+            (contenido.whatsapp?.caption || 'Sin caption').substring(0, 100) +
+            '...',
         },
       );
 
       const whatsappResult = await sendStory({
         media: imagenUrl,
-        caption: contenido.whatsapp.caption,
+        caption: contenido.whatsapp?.caption || 'Contenido para WhatsApp Story',
         exclude_contacts: contactos,
       });
 
@@ -416,37 +430,89 @@ export class RedesSocialesService {
 
     for (const resultado of resultados) {
       let caption = '';
-      switch (resultado.plataforma) {
-        case 'facebook':
-          caption = contenido.facebook.caption;
-          break;
-        case 'instagram':
-          caption = contenido.instagram.caption;
-          break;
-        case 'linkedin':
-          caption = contenido.linkedin.caption;
-          break;
-        case 'whatsapp':
-          caption = contenido.whatsapp.caption;
-          break;
+
+      try {
+        switch (resultado.plataforma) {
+          case 'facebook':
+            caption = contenido.facebook?.caption || 'Contenido para Facebook';
+            break;
+          case 'instagram':
+            caption =
+              contenido.instagram?.caption || 'Contenido para Instagram';
+            break;
+          case 'linkedin':
+            caption = contenido.linkedin?.caption || 'Contenido para LinkedIn';
+            break;
+          case 'whatsapp':
+            caption = contenido.whatsapp?.caption || 'Contenido para WhatsApp';
+            break;
+          default:
+            caption = `Contenido para ${resultado.plataforma}`;
+            break;
+        }
+      } catch (error) {
+        PublicationLogger.logError(
+          mensajeId,
+          'DATABASE',
+          `Error obteniendo caption para ${resultado.plataforma}`,
+          { error, contenido },
+        );
+        caption = `Contenido para ${resultado.plataforma}`;
+      }
+
+      PublicationLogger.logInfo(
+        mensajeId,
+        'DATABASE',
+        `Guardando publicación de ${resultado.plataforma}`,
+        {
+          plataforma: resultado.plataforma,
+          caption: caption.substring(0, 50) + '...',
+          postId: resultado.postId,
+          exito: resultado.exito,
+        },
+      );
+
+      // Validar que caption no esté vacío
+      if (!caption || caption.trim() === '') {
+        caption = `Contenido para ${resultado.plataforma}`;
+        PublicationLogger.logWarning(
+          mensajeId,
+          'DATABASE',
+          `Caption vacío para ${resultado.plataforma}, usando default`,
+        );
       }
 
       //GUARDARMOS TODOS LOS DATOS DE LA PUBLICACION EN LA BD
-      await this.prisma.publicacion.create({
-        data: {
-          titulo: `Publicación ${resultado.plataforma}`,
-          plataforma: resultado.plataforma,
-          postId: resultado.postId,
-          caption: caption,
-          imagenUrl: rutaImagen
-            ? `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/images/${rutaImagen}`
-            : undefined,
-          link: resultado.link || null,
-          mensajeId: mensajeId,
-          chatId: mensaje.chatId,
-          estado: resultado.exito ? 'PUBLICADO' : 'ERROR',
-        },
-      });
+      try {
+        await this.prisma.publicacion.create({
+          data: {
+            titulo: `Publicación ${resultado.plataforma}`,
+            plataforma: resultado.plataforma,
+            postId: resultado.postId || null,
+            caption: caption,
+            imagenUrl: rutaImagen
+              ? `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/images/${rutaImagen}`
+              : undefined,
+            link: resultado.link || null,
+            mensajeId: mensajeId,
+            chatId: mensaje.chatId,
+            estado: resultado.exito ? 'PUBLICADO' : 'ERROR',
+          },
+        });
+
+        PublicationLogger.logSuccess(
+          mensajeId,
+          'DATABASE',
+          `Publicación de ${resultado.plataforma} guardada correctamente`,
+        );
+      } catch (dbError) {
+        PublicationLogger.logError(
+          mensajeId,
+          'DATABASE',
+          `Error guardando publicación de ${resultado.plataforma}`,
+          { dbError, resultado, caption },
+        );
+      }
     }
   }
 

@@ -255,7 +255,7 @@ export class SocketChatGateway
             this.wss.emit('image-generation-complete', {
               type: 'image',
               chatId: chatId,
-              imageUrl: `${BACKEND_URL}/images/${filename}`,
+              imageUrl: `http://localhost:4000/api/images/${filename}`,
               isPartial: false,
               revisedPrompt: imageData.revised_prompt, // DALL-E a veces revisa el prompt
               modelUsed: modelInfo.name,
@@ -493,7 +493,7 @@ export class SocketChatGateway
         json.linkedin &&
         typeof json.linkedin.caption === 'string' &&
         json.whatsapp &&
-        typeof json.whatsapp.titulo === 'string' &&
+        typeof json.whatsapp.caption === 'string' &&
         json.tiktok &&
         typeof json.tiktok.titulo === 'string' &&
         Array.isArray(json.tiktok.hashtags)
@@ -590,7 +590,7 @@ export class SocketChatGateway
             this.wss.emit('social-image-generation-complete', {
               chatId: chatId,
               mensajeId: mensajeId,
-              imageUrl: `${BACKEND_URL}/images/${filename}`,
+              imageUrl: `http://localhost:4000/api/images/${filename}`,
               modelUsed: modelInfo.name,
               revisedPrompt: imageData.revised_prompt,
             });
