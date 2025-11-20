@@ -335,8 +335,9 @@ export class RedesSocialesService {
         },
       );
 
+      // Para WhatsApp, usar directamente el nombre del archivo de rutaImagen
       const whatsappResult = await sendStory({
-        media: imagenUrl,
+        media: rutaImagen ? `dummy:///${rutaImagen}` : null, // Usar un formato que permita extraer el nombre del archivo
         caption: contenido.whatsapp?.caption || 'Contenido para WhatsApp Story',
         exclude_contacts: contactos,
       });
