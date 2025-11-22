@@ -28,12 +28,15 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 COPY prisma ./prisma
 
-# Install only production dependencies
-RUN npm ci --only=production
+# Install all dependencies (needed for prisma commands)
+RUN npm ci
 
 # Copy built application from builder stage
 COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
+
+# Copy any additional config files if needed
+COPY nest-cli.json ./
+COPY tsconfig*.json ./
 
 # Generate Prisma client for production
 RUN npx prisma generate
