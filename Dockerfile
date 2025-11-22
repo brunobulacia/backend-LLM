@@ -13,11 +13,22 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Debug: List all files to ensure everything is copied
+RUN echo "Files copied to builder stage:" && ls -la
+
 # Generate Prisma client
 RUN npx prisma generate
 
 # Build the application
-RUN echo "Building NestJS application..." && npm run build && echo "Build completed successfully!" && ls -la dist/
+RUN echo "Building NestJS application..." && \
+    npm run build && \
+    echo "Build completed successfully!" && \
+    echo "Contents of dist directory:" && \
+    ls -la dist/ && \
+    echo "Contents of dist/src directory:" && \
+    ls -la dist/src/ && \
+    echo "Verifying main.js exists:" && \
+    test -f dist/src/main.js && echo "main.js found!" || echo "ERROR: main.js not found!"
 
 # Production stage
 FROM node:22
@@ -47,9 +58,5 @@ EXPOSE 8080
 # Set NODE_ENV to production
 ENV NODE_ENV=production
 
-# Create a startup script with better error handling
-RUN echo '#!/bin/bash\necho "Starting application..."\necho "Current working directory: $(pwd)"\necho "Checking dist directory:"\nls -la dist/\necho "Checking dist/src directory:"\nls -la dist/src/ 2>/dev/null || echo "dist/src/ not found"\necho "Checking environment variables:"\necho "NODE_ENV: $NODE_ENV"\necho "PORT: $PORT"\necho "Running Prisma migrations..."\nnpx prisma migrate deploy\necho "Starting the application..."\nif [ -f "dist/src/main.js" ]; then\n  echo "Found dist/src/main.js, starting..."\n  node dist/src/main.js\nelif [ -f "dist/main.js" ]; then\n  echo "Found dist/main.js, starting..."\n  node dist/main.js\nelif [ -f "dist/main" ]; then\n  echo "Found dist/main, starting..."\n  node dist/main\nelse\n  echo "Error: No main file found"\n  echo "Contents of dist directory:"\n  find dist/ -name "*.js" -type f\n  exit 1\nfi' > /usr/src/app/start.sh
-RUN chmod +x /usr/src/app/start.sh
-
 # Run database migrations and start the application
-CMD ["/usr/src/app/start.sh"]
+CMD ["sh", "-c", "echo 'Starting application...' && echo 'Checking dist directory:' && ls -la dist/ && echo 'Checking dist/src directory:' && ls -la dist/src/ && echo 'Running Prisma migrations...' && npx prisma migrate deploy && echo 'Starting NestJS app...' && node dist/src/main.js"]
