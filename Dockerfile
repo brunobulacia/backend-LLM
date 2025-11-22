@@ -47,5 +47,9 @@ EXPOSE 8080
 # Set NODE_ENV to production
 ENV NODE_ENV=production
 
+# Create a startup script with better error handling
+RUN echo '#!/bin/sh\necho "Starting application..."\necho "Current working directory: $(pwd)"\necho "Checking dist directory:"\nls -la dist/\necho "Checking environment variables:"\necho "NODE_ENV: $NODE_ENV"\necho "PORT: $PORT"\necho "DATABASE_URL: ${DATABASE_URL:0:20}..." # Only show first 20 chars for security\necho "Running Prisma migrations..."\nnpx prisma migrate deploy\necho "Starting the application..."\nif [ -f "dist/main.js" ]; then\n  echo "Found dist/main.js, starting..."\n  node dist/main.js\nelif [ -f "dist/main" ]; then\n  echo "Found dist/main, starting..."\n  node dist/main\nelse\n  echo "Error: No main file found in dist/"\n  echo "Contents of dist directory:"\n  ls -la dist/\n  exit 1\nfi' > /usr/src/app/start.sh
+RUN chmod +x /usr/src/app/start.sh
+
 # Run database migrations and start the application
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]
+CMD ["/usr/src/app/start.sh"]
