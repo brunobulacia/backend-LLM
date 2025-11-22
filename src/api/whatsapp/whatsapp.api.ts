@@ -23,19 +23,15 @@ export const sendStory = async (storyData: PostStoryDto) => {
 
     const formData = new FormData();
 
-    // Agregar caption y exclude_contacts como campos de texto
     formData.append('caption', storyData.caption);
     formData.append(
       'exclude_contacts',
       JSON.stringify(storyData.exclude_contacts),
     );
 
-    // Si hay una imagen, agregarla como archivo
     if (storyData.media) {
-      // Extraer el nombre del archivo de la URL
       let fileName = storyData.media.split('/').pop();
 
-      // Si el media viene en formato dummy:///filename, extraer solo el filename
       if (storyData.media.startsWith('dummy:///')) {
         fileName = storyData.media.replace('dummy:///', '');
       }
@@ -46,11 +42,9 @@ export const sendStory = async (storyData: PostStoryDto) => {
 
       const filePath = path.join(process.cwd(), 'uploads', 'images', fileName);
 
-      // Verificar si el archivo existe
       if (fs.existsSync(filePath)) {
         console.log('📁 [WHATSAPP] Archivo encontrado:', filePath);
 
-        // Determinar el tipo de contenido basado en la extensión del archivo
         let contentType = 'image/png';
         if (
           fileName.toLowerCase().endsWith('.jpg') ||
@@ -69,7 +63,6 @@ export const sendStory = async (storyData: PostStoryDto) => {
           size: fs.statSync(filePath).size,
         });
 
-        // Leer el archivo y agregarlo al FormData
         const fileStream = fs.createReadStream(filePath);
         formData.append('media', fileStream, {
           filename: fileName,
@@ -85,7 +78,7 @@ export const sendStory = async (storyData: PostStoryDto) => {
     const response = await whatsappApi.post('/stories/send/media', formData, {
       headers: {
         Authorization: `Bearer ${whatsappToken}`,
-        ...formData.getHeaders(), // Esto agrega el Content-Type correcto para multipart/form-data
+        ...formData.getHeaders(),
       },
     });
 

@@ -13,6 +13,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Set temporary DATABASE_URL for Prisma client generation
+ENV DATABASE_URL="postgresql://temp:temp@localhost:5432/temp?schema=public"
+
 # Generate Prisma client
 RUN npx prisma generate
 
@@ -34,6 +37,9 @@ RUN npm ci --only=production
 # Copy built application from builder stage
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
+
+# Set temporary DATABASE_URL for Prisma client generation
+ENV DATABASE_URL="postgresql://temp:temp@localhost:5432/temp?schema=public"
 
 # Generate Prisma client for production
 RUN npx prisma generate
