@@ -6,6 +6,7 @@ WORKDIR /usr/src/app
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 
 # Install all dependencies (including dev dependencies for build)
 RUN npm ci
@@ -14,8 +15,8 @@ RUN npm ci
 COPY . .
 
 
-# Generate Prisma client
-RUN npx prisma generate
+# Generate Prisma client with temporary DATABASE_URL for Prisma 7
+RUN DATABASE_URL="postgresql://temp:temp@localhost:5432/temp" npx prisma generate
 
 # Build the application
 RUN npm run build
@@ -28,6 +29,7 @@ WORKDIR /usr/src/app
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 
 # Install only production dependencies
 RUN npm ci --only=production
@@ -36,8 +38,8 @@ RUN npm ci --only=production
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
 
-# Generate Prisma client for production
-RUN npx prisma generate
+# Generate Prisma client for production with temporary DATABASE_URL
+RUN DATABASE_URL="postgresql://temp:temp@localhost:5432/temp" npx prisma generate
 
 # Expose port
 EXPOSE 8080
