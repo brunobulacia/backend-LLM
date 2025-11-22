@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { PublicationLogger } from './utils/publication-logger';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,6 +12,7 @@ async function bootstrap() {
     credentials: true,
   });
 
+  app.use(express.static('public'));
   // Inicializar y testear el sistema de logging
   console.log('Inicializando sistema de logging...');
   PublicationLogger.test();
