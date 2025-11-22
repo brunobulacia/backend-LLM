@@ -3,18 +3,17 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { PublicationLogger } from './utils/publication-logger';
 import * as express from 'express';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
-  app.enableCors({
-    origin: true,
-    credentials: true,
-  });
+  app.enableCors({ origin: true, credentials: true });
 
-  app.use(express.static('public'));
-  // Inicializar y testear el sistema de logging
-  console.log('Inicializando sistema de logging...');
+  const publicPath = join(__dirname, '..', 'public');
+  console.log('Buscando archivos estáticos en:', publicPath);
+  app.use(express.static(publicPath));
+
   PublicationLogger.test();
 
   await app.listen(process.env.PORT ?? 8080);
