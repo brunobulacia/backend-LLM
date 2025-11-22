@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import {
   WebSocketGateway,
   SubscribeMessage,
@@ -38,16 +39,26 @@ export class SocketChatGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer() wss: Server;
+  private client: OpenAI;
+
   constructor(
     private readonly socketChatService: SocketChatService,
     private readonly mensajesService: MensajesService,
     private readonly redesSocialesService: RedesSocialesService,
-  ) {}
+  ) {
+    // Verificar que la API key esté presente
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        'OPENAI_API_KEY is required but not found in environment variables',
+      );
+    }
 
-  //CREAR INSTANCIA DE OPENAI CON API KEY
-  client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+    // Crear instancia de OpenAI con API KEY
+    this.client = new OpenAI({
+      apiKey: apiKey,
+    });
+  }
 
   handleConnection(client: Socket) {
     this.socketChatService.addClient(client);
