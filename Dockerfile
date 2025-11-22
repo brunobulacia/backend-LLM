@@ -17,7 +17,7 @@ COPY . .
 RUN npx prisma generate
 
 # Build the application
-RUN npm run build
+RUN echo "Building NestJS application..." && npm run build && echo "Build completed successfully!" && ls -la dist/
 
 # Production stage
 FROM node:22
@@ -48,7 +48,7 @@ EXPOSE 8080
 ENV NODE_ENV=production
 
 # Create a startup script with better error handling
-RUN echo '#!/bin/sh\necho "Starting application..."\necho "Current working directory: $(pwd)"\necho "Checking dist directory:"\nls -la dist/\necho "Checking environment variables:"\necho "NODE_ENV: $NODE_ENV"\necho "PORT: $PORT"\necho "DATABASE_URL: ${DATABASE_URL:0:20}..." # Only show first 20 chars for security\necho "Running Prisma migrations..."\nnpx prisma migrate deploy\necho "Starting the application..."\nif [ -f "dist/main.js" ]; then\n  echo "Found dist/main.js, starting..."\n  node dist/main.js\nelif [ -f "dist/main" ]; then\n  echo "Found dist/main, starting..."\n  node dist/main\nelse\n  echo "Error: No main file found in dist/"\n  echo "Contents of dist directory:"\n  ls -la dist/\n  exit 1\nfi' > /usr/src/app/start.sh
+RUN echo '#!/bin/bash\necho "Starting application..."\necho "Current working directory: $(pwd)"\necho "Checking dist directory:"\nls -la dist/\necho "Checking dist/src directory:"\nls -la dist/src/ 2>/dev/null || echo "dist/src/ not found"\necho "Checking environment variables:"\necho "NODE_ENV: $NODE_ENV"\necho "PORT: $PORT"\necho "Running Prisma migrations..."\nnpx prisma migrate deploy\necho "Starting the application..."\nif [ -f "dist/src/main.js" ]; then\n  echo "Found dist/src/main.js, starting..."\n  node dist/src/main.js\nelif [ -f "dist/main.js" ]; then\n  echo "Found dist/main.js, starting..."\n  node dist/main.js\nelif [ -f "dist/main" ]; then\n  echo "Found dist/main, starting..."\n  node dist/main\nelse\n  echo "Error: No main file found"\n  echo "Contents of dist directory:"\n  find dist/ -name "*.js" -type f\n  exit 1\nfi' > /usr/src/app/start.sh
 RUN chmod +x /usr/src/app/start.sh
 
 # Run database migrations and start the application
