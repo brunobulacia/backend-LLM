@@ -155,6 +155,25 @@ export class VideosService {
     try {
       console.log('📹 [VIDEO] Usando video de ejemplo...');
 
+      // Debug: Verificar directorio actual y estructura
+      console.log('🔍 [DEBUG] Directorio actual:', process.cwd());
+      console.log('🔍 [DEBUG] Verificando estructura de archivos...');
+      
+      try {
+        const uploadsExists = fs.existsSync(path.join(process.cwd(), 'uploads'));
+        const videosExists = fs.existsSync(path.join(process.cwd(), 'uploads', 'videos'));
+        
+        console.log('🔍 [DEBUG] uploads/ existe:', uploadsExists);
+        console.log('🔍 [DEBUG] uploads/videos/ existe:', videosExists);
+        
+        if (videosExists) {
+          const videoFiles = fs.readdirSync(path.join(process.cwd(), 'uploads', 'videos'));
+          console.log('🔍 [DEBUG] Archivos en uploads/videos/:', videoFiles);
+        }
+      } catch (debugError) {
+        console.error('❌ [DEBUG] Error verificando estructura:', debugError);
+      }
+
       // Ruta del video de ejemplo
       const videoEjemploPath = path.join(
         process.cwd(),

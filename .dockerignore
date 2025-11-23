@@ -1,5 +1,16 @@
 node_modules
-dist
-Dockerfile
-.dockerignore
 .env
+.git
+.gitignore
+README.md
+.nyc_output
+coverage
+.DS_Store
+*.log
+dist
+
+# Incluir archivos necesarios para el despliegue
+!uploads/
+!uploads/videos/
+!uploads/videos/sample_640x360.mp4
+!public/
