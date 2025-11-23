@@ -21,7 +21,14 @@ enum Emisor {
 enum TipoContenido {
   TEXTO
   IMAGEN
+  VIDEO
   CONTENIDO_REDES_SOCIALES
+}
+
+enum EstadoVideo {
+  GENERANDO
+  COMPLETADO
+  ERROR
 }
 
 enum EstadoPublicacion {
@@ -45,6 +52,11 @@ model Mensaje {
   contenidoRedesSociales Json? // Almacena el JSON con el contenido para cada red social
   estadoPublicacion      EstadoPublicacion?
   imagenGenerada         String? // Ruta de la imagen generada por DALL-E para redes sociales
+
+  // Campos para videos generados con Sora
+  videoGenerado String? // Ruta del video generado por Sora para TikTok
+  estadoVideo   EstadoVideo?
+  soraVideoId   String? // ID del video en OpenAI Sora para tracking
 
   // Relación con publicaciones
   publicaciones Publicacion[]
@@ -73,6 +85,7 @@ model Publicacion {
   postId     String? // ID del post en la red social
   caption    String // El caption específico para esta red social
   imagenUrl  String? // URL de la imagen publicada
+  videoUrl   String? // URL del video publicado (para TikTok)
   mensajeId  String? // Referencia al mensaje que generó esta publicación
   mensaje    Mensaje?          @relation(fields: [mensajeId], references: [id])
   chatId     String

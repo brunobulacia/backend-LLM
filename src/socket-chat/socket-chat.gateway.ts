@@ -25,6 +25,7 @@ import {
   RedesSocialesService,
   ContenidoRedesSociales,
 } from '../redes-sociales/redes-sociales.service';
+import { VideosService } from '../videos/videos.service';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000/api';
 
@@ -45,6 +46,7 @@ export class SocketChatGateway
     private readonly socketChatService: SocketChatService,
     private readonly mensajesService: MensajesService,
     private readonly redesSocialesService: RedesSocialesService,
+    private readonly videosService: VideosService,
   ) {
     // Verificar que la API key esté presente
     const apiKey = process.env.OPENAI_API_KEY;
@@ -196,11 +198,19 @@ export class SocketChatGateway
       estadoPublicacion: estadoPublicacion as any,
     });
 
-    // Si es contenido de redes sociales, generar imagen automáticamente
+    // Si es contenido de redes sociales, generar imagen y video automáticamente
     if (isContenidoRedesSociales) {
+      // Generar imagen para redes sociales (Facebook, Instagram, LinkedIn, WhatsApp)
       await this.generarImagenParaRedesSociales(
         mensajeGuardado.id,
         prompt,
+        chatId,
+      );
+
+      // Generar video para TikTok
+      await this.generarVideoParaTikTok(
+        mensajeGuardado.id,
+        contenidoRedesSociales,
         chatId,
       );
     }
@@ -442,6 +452,7 @@ export class SocketChatGateway
           data.mensajeId,
           mensaje.contenidoRedesSociales as unknown as ContenidoRedesSociales,
           mensaje.imagenGenerada || undefined,
+          mensaje.videoGenerado || undefined,
         );
 
       // Enviar resultados al cliente
@@ -601,7 +612,7 @@ export class SocketChatGateway
             this.wss.emit('social-image-generation-complete', {
               chatId: chatId,
               mensajeId: mensajeId,
-              imageUrl: `http://localhost:4000/api/images/${filename}`,
+              imageUrl: `${process.env.BACKEND_URL}/api/images/${filename}`,
               modelUsed: modelInfo.name,
               revisedPrompt: imageData.revised_prompt,
             });
@@ -624,5 +635,58 @@ export class SocketChatGateway
       mensajeId: mensajeId,
       error: 'Error al generar la imagen para redes sociales',
     });
+  }
+
+  /**
+   * Genera un video con Sora para TikTok basado en el contenido de redes sociales
+   */
+  private async generarVideoParaTikTok(
+    mensajeId: string,
+    contenidoRedesSociales: ContenidoRedesSociales,
+    chatId: string,
+  ) {
+    console.log('🎬 Generando video para TikTok...');
+
+    // Emitir evento de inicio de generación de video
+    this.wss.emit('social-video-generation-start', {
+      chatId: chatId,
+      mensajeId: mensajeId,
+      message: 'Generando video para TikTok con Sora...',
+    });
+
+    try {
+      // Generar prompt optimizado para TikTok
+      const promptVideo = this.videosService.generarPromptParaTikTok(
+        contenidoRedesSociales.tiktok,
+      );
+
+      // Generar video con Sora
+      const rutaVideo = await this.videosService.generarVideoConSora(
+        promptVideo,
+        mensajeId,
+      );
+
+      if (rutaVideo) {
+        console.log('✅ Video generado exitosamente:', rutaVideo);
+
+        // Emitir evento de éxito
+        this.wss.emit('social-video-generated', {
+          chatId: chatId,
+          mensajeId: mensajeId,
+          message: 'Video para TikTok generado exitosamente',
+          videoPath: rutaVideo,
+        });
+      } else {
+        throw new Error('No se pudo generar el video');
+      }
+    } catch (error) {
+      console.error('❌ Error generando video para TikTok:', error);
+
+      this.wss.emit('social-video-generation-error', {
+        chatId: chatId,
+        mensajeId: mensajeId,
+        error: 'Error al generar el video para TikTok',
+      });
+    }
   }
 }

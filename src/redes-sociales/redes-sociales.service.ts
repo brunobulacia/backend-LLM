@@ -14,6 +14,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { contactos } from 'src/utils/contacts';
 import { sendStory } from 'src/api/whatsapp/whatsapp.api';
+import { subirVideoCompletoTikTok } from 'src/api/tiktok/tiktok.api';
 
 export interface ContenidoRedesSociales {
   facebook: { caption: string };
@@ -42,6 +43,7 @@ export class RedesSocialesService {
     mensajeId: string,
     contenido: ContenidoRedesSociales,
     rutaImagen?: string,
+    rutaVideo?: string,
   ): Promise<ResultadoPublicacion[]> {
     const resultados: ResultadoPublicacion[] = [];
 
@@ -310,7 +312,7 @@ export class RedesSocialesService {
     }
 
     //Publicar story en whatsapp
-    try {
+    /* try {
       // Debug: Log del contenido completo
       PublicationLogger.logInfo(
         mensajeId,
@@ -373,6 +375,85 @@ export class RedesSocialesService {
         exito: false,
         error: error.message,
       });
+    } */
+
+    //Publicar en TikTok
+    try {
+      if (rutaVideo) {
+        PublicationLogger.logInfo(
+          mensajeId,
+          'TIKTOK',
+          'Iniciando publicación en TikTok',
+          {
+            tieneVideo: !!rutaVideo,
+            titulo: contenido.tiktok.titulo.substring(0, 50) + '...',
+            hashtags: contenido.tiktok.hashtags.join(', '),
+          },
+        );
+
+        const tiktokResult = await subirVideoCompletoTikTok(
+          contenido.tiktok.titulo,
+          rutaVideo,
+        );
+
+        const resultado = {
+          plataforma: 'tiktok',
+          exito: tiktokResult.status === 'published',
+          postId: tiktokResult.publish_id || 'unknown',
+          link:
+            tiktokResult.status === 'published'
+              ? 'Video publicado en TikTok'
+              : 'No disponible',
+        };
+
+        if (tiktokResult.status === 'published') {
+          PublicationLogger.logSuccess(
+            mensajeId,
+            'TIKTOK',
+            'Video publicado exitosamente',
+            {
+              publishId: resultado.postId,
+              status: tiktokResult.status,
+            },
+          );
+        } else {
+          PublicationLogger.logError(
+            mensajeId,
+            'TIKTOK',
+            'Video no se publicó correctamente',
+            { status: tiktokResult.status, result: tiktokResult },
+          );
+          resultado.exito = false;
+          (resultado as any).error = `Estado: ${tiktokResult.status}`;
+        }
+
+        resultados.push(resultado);
+      } else {
+        PublicationLogger.logWarning(
+          mensajeId,
+          'TIKTOK',
+          'No se puede publicar sin video',
+        );
+
+        resultados.push({
+          plataforma: 'tiktok',
+          exito: false,
+          error: 'TikTok requiere video',
+        });
+      }
+    } catch (error) {
+      PublicationLogger.logError(
+        mensajeId,
+        'TIKTOK',
+        'Error en publicación',
+        error,
+      );
+
+      resultados.push({
+        plataforma: 'tiktok',
+        exito: false,
+        error: error.message,
+      });
     }
 
     // Guardar resultados en la base de datos
@@ -381,6 +462,7 @@ export class RedesSocialesService {
       resultados,
       contenido,
       rutaImagen,
+      rutaVideo,
     );
 
     // Actualizar estado final del mensaje
@@ -421,6 +503,7 @@ export class RedesSocialesService {
     resultados: ResultadoPublicacion[],
     contenido: ContenidoRedesSociales,
     rutaImagen?: string,
+    rutaVideo?: string,
   ) {
     const mensaje = await this.prisma.mensaje.findUnique({
       where: { id: mensajeId },
@@ -446,6 +529,9 @@ export class RedesSocialesService {
             break;
           case 'whatsapp':
             caption = contenido.whatsapp?.caption || 'Contenido para WhatsApp';
+            break;
+          case 'tiktok':
+            caption = contenido.tiktok?.titulo || 'Contenido para TikTok';
             break;
           default:
             caption = `Contenido para ${resultado.plataforma}`;
@@ -494,6 +580,10 @@ export class RedesSocialesService {
             imagenUrl: rutaImagen
               ? `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/images/${rutaImagen}`
               : undefined,
+            videoUrl:
+              rutaVideo && resultado.plataforma === 'tiktok'
+                ? `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/videos/${rutaVideo}`
+                : undefined,
             link: resultado.link || null,
             mensajeId: mensajeId,
             chatId: mensaje.chatId,

@@ -6,6 +6,7 @@ import { ChatsModule } from './chats/chats.module';
 import { ImagesModule } from './images/images.module';
 import { RedesSocialesModule } from './redes-sociales/redes-sociales.module';
 import { TiktokModule } from './tiktok/tiktok.module';
+import { VideosModule } from './videos/videos.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { TiktokModule } from './tiktok/tiktok.module';
     ImagesModule,
     RedesSocialesModule,
     TiktokModule,
+    VideosModule,
   ],
   controllers: [],
   providers: [],

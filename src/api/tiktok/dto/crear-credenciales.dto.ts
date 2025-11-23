@@ -1,4 +1,6 @@
-export function CrearCredencialesDto(title: string) {
+export function CrearCredencialesDto(title: string, videoSize?: number) {
+  const size = videoSize || 574823; // Usar el tamaño proporcionado o un valor por defecto
+
   return {
     post_info: {
       title: title,
@@ -10,8 +12,8 @@ export function CrearCredencialesDto(title: string) {
     },
     source_info: {
       source: 'FILE_UPLOAD',
-      video_size: 574823,
-      chunk_size: 574823,
+      video_size: size,
+      chunk_size: size,
       total_chunk_count: 1,
     },
   };

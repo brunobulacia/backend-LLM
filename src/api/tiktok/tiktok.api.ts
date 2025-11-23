@@ -1,6 +1,8 @@
 import axios from 'src/lib/axios';
 import axiosNativo from 'axios';
 import { CrearCredencialesDto } from './dto/crear-credenciales.dto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const baseUrl = 'https://api.tiktok.com/v2';
 
@@ -11,8 +13,11 @@ axios.createInstance(baseUrl);
 export const tiktokApi = axios.getInstance(baseUrl);
 
 //1. Crear las credenciales de publicación
-export const crearCredencialesPublicacion = async (titulo: string) => {
-  const data = CrearCredencialesDto(titulo);
+export const crearCredencialesPublicacion = async (
+  titulo: string,
+  videoSize?: number,
+) => {
+  const data = CrearCredencialesDto(titulo, videoSize);
   const response = await tiktokApi.post('/post/publish/video/init/', data, {
     headers: {
       Authorization: `Bearer ${tiktokToken}`,
@@ -55,26 +60,91 @@ export const verEstadoPublicacion = async (publishId: string) => {
 // SUBIR DE UN SAQUE TODO
 export const subirVideoCompletoTikTok = async (
   titulo: string,
-  videoFile: File,
+  videoFileName: string, // Ahora es el nombre del archivo, no la ruta completa
 ) => {
+  console.log('🎬 [TIKTOK] Iniciando subida completa de video:', {
+    titulo,
+    videoFileName,
+  });
+
+  // Construir la ruta completa del archivo
+  const videoPath = path.join(
+    process.cwd(),
+    'uploads',
+    'videos',
+    videoFileName,
+  );
+
+  // Verificar que el archivo existe
+  if (!fs.existsSync(videoPath)) {
+    throw new Error(`Video no encontrado: ${videoPath}`);
+  }
+
+  // Leer el archivo y crear el File object
+  const buffer = fs.readFileSync(videoPath);
+  const blob = new Blob([buffer]);
+  const videoFile = new File([blob], videoFileName, { type: 'video/mp4' });
+
+  console.log('📁 [TIKTOK] Archivo leído correctamente:', {
+    size: buffer.length,
+    path: videoPath,
+  });
+
   // Paso 1: Crear las credenciales de publicación
-  const credenciales = await crearCredencialesPublicacion(titulo);
+  console.log('🔑 [TIKTOK] Creando credenciales de publicación...');
+  const credenciales = await crearCredencialesPublicacion(
+    titulo,
+    buffer.length,
+  );
   const uploadUrl = credenciales.upload_url;
   const publishId = credenciales.publish_id;
 
-  // Paso 2: Subir el video a TikTok
+  console.log('✅ [TIKTOK] Credenciales obtenidas:', { publishId });
+
+  // Paso 2: Subir el video a TikTokn
+  console.log('⬆️ [TIKTOK] Subiendo video a TikTok...');
   await subirVideoTikTok(videoFile, uploadUrl);
+  console.log('✅ [TIKTOK] Video subido exitosamente');
 
   // Paso 3: Ver el estado de la publicación
+  console.log('⏳ [TIKTOK] Monitoreando estado de publicación...');
   let estadoPublicacion;
+  let intentos = 0;
+  const maxIntentos = 12; // 1 minuto máximo (12 x 5 segundos)
+
   do {
     estadoPublicacion = await verEstadoPublicacion(publishId);
-    // Esperar un poco antes de verificar nuevamente
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    console.log(
+      `🔍 [TIKTOK] Estado (intento ${intentos + 1}/${maxIntentos}):`,
+      estadoPublicacion.status,
+    );
+
+    if (
+      estadoPublicacion.status !== 'published' &&
+      estadoPublicacion.status !== 'failed'
+    ) {
+      // Esperar un poco antes de verificar nuevamente
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+
+    intentos++;
   } while (
     estadoPublicacion.status !== 'published' &&
-    estadoPublicacion.status !== 'failed'
+    estadoPublicacion.status !== 'failed' &&
+    intentos < maxIntentos
   );
+
+  if (intentos >= maxIntentos) {
+    console.log(
+      '⚠️ [TIKTOK] Timeout esperando publicación, último estado:',
+      estadoPublicacion.status,
+    );
+  } else {
+    console.log(
+      '🎉 [TIKTOK] Publicación finalizada con estado:',
+      estadoPublicacion.status,
+    );
+  }
 
   return estadoPublicacion;
 };
