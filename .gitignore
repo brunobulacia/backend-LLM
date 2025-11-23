@@ -48,8 +48,6 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
-/uploads
-/prisma/migrations
 
 
 # Runtime data
