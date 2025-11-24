@@ -18,7 +18,12 @@ export const crearCredencialesPublicacion = async (
   videoSize?: number,
 ) => {
   try {
+    console.log('Antes de entrar a la función CrearCredencialesDto');
     const data = CrearCredencialesDto(titulo, videoSize);
+    console.log(
+      '🔑 [TIKTOK] Despues de crear credenciales de publicación con datos:',
+      data,
+    );
     const response = await tiktokApi.post('/post/publish/video/init/', data, {
       headers: {
         Authorization: `Bearer ${tiktokToken}`,
@@ -26,8 +31,8 @@ export const crearCredencialesPublicacion = async (
     });
     return response.data;
   } catch (error) {
-    console.log('❌ [TIKTOK] Error en API real, usando modo demo...');
-
+    console.log('[TIKTOK] Error en API real, usando modo demo...');
+    console.error(error);
     // Simular respuesta exitosa para modo demo
     return {
       upload_url: 'https://demo-upload-url.com/fake-upload',
