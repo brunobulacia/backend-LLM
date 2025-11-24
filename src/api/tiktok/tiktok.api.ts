@@ -4,7 +4,7 @@ import { CrearCredencialesDto } from './dto/crear-credenciales.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const baseUrl = 'https://api.tiktok.com/v2';
+const baseUrl = 'https://open.tiktokapis.com';
 
 const tiktokToken = process.env.TIKTOK_TOKEN || '';
 
@@ -24,7 +24,7 @@ export const crearCredencialesPublicacion = async (
       '🔑 [TIKTOK] Despues de crear credenciales de publicación con datos:',
       data,
     );
-    const response = await tiktokApi.post('/post/publish/video/init/', data, {
+    const response = await tiktokApi.post('/v2/post/publish/video/init/', data, {
       headers: {
         Authorization: `Bearer ${tiktokToken}`,
       },
@@ -77,7 +77,7 @@ export const verEstadoPublicacion = async (publishId: string) => {
     };
   }
 
-  const response = await tiktokApi.get(`/post/publish/video/status/`, {
+  const response = await tiktokApi.get(`/v2/post/publish/video/status/`, {
     headers: {
       Authorization: `Bearer ${tiktokToken}`,
     },
