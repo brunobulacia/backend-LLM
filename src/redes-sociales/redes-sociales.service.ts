@@ -112,7 +112,7 @@ export class RedesSocialesService {
     }
 
     // Publicar en Facebook
-    try {
+    /* try {
       PublicationLogger.logInfo(
         mensajeId,
         'FACEBOOK',
@@ -375,7 +375,7 @@ export class RedesSocialesService {
         exito: false,
         error: error.message,
       });
-    }
+    } */
 
     //Publicar en TikTok
     try {
