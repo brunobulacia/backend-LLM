@@ -15,6 +15,7 @@ import * as path from 'path';
 import { contactos } from 'src/utils/contacts';
 import { sendStory } from 'src/api/whatsapp/whatsapp.api';
 import { subirVideoCompletoTikTok } from 'src/api/tiktok/tiktok.api';
+import { generarVideoParaTikTok } from 'src/api/runway/runway.api';
 
 export interface ContenidoRedesSociales {
   facebook: { caption: string };
@@ -604,6 +605,162 @@ export class RedesSocialesService {
           { dbError, resultado, caption },
         );
       }
+    }
+  }
+
+  /**
+   * Generar video con IA usando Runway ML y publicar SOLO en TikTok
+   */
+  async generarYPublicarVideoIA(
+    mensajeId: string,
+    contenido: ContenidoRedesSociales,
+    promptVideo: string,
+  ): Promise<ResultadoPublicacion[]> {
+    const resultados: ResultadoPublicacion[] = [];
+
+    // Log inicio del proceso
+    PublicationLogger.logStart(
+      mensajeId,
+      { ai_video: { prompt: promptVideo } },
+      undefined,
+    );
+
+    try {
+      // Actualizar estado del mensaje a GENERANDO_VIDEO
+      PublicationLogger.logInfo(
+        mensajeId,
+        'DATABASE',
+        'Actualizando estado a GENERANDO_VIDEO',
+      );
+      await this.prisma.mensaje.update({
+        where: { id: mensajeId },
+        data: { estadoPublicacion: 'PUBLICANDO' }, // Usar PUBLICANDO por ahora
+      });
+
+      // 1. Generar video con Runway ML (2 segundos, formato TikTok)
+      PublicationLogger.logInfo(
+        mensajeId,
+        'RUNWAY',
+        'Iniciando generación de video IA',
+        { prompt: promptVideo, duration: 2, ratio: '720:1280' },
+      );
+
+      const videoFileName = await generarVideoParaTikTok(promptVideo);
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'RUNWAY',
+        'Video IA generado exitosamente',
+        { videoFileName },
+      );
+
+      // 2. Publicar SOLO en TikTok
+      try {
+        PublicationLogger.logInfo(
+          mensajeId,
+          'TIKTOK',
+          'Iniciando publicación en TikTok con video IA',
+          {
+            videoFileName,
+            titulo: contenido.tiktok.titulo,
+          },
+        );
+
+        const tiktokResult = await subirVideoCompletoTikTok(
+          contenido.tiktok.titulo,
+          videoFileName,
+        );
+
+        const resultado = {
+          plataforma: 'tiktok',
+          exito: true,
+          postId: tiktokResult?.id || 'ai_video',
+          link: tiktokResult?.share_url || 'TikTok video publicado con IA',
+        };
+
+        PublicationLogger.logSuccess(
+          mensajeId,
+          'TIKTOK',
+          'Video IA publicado exitosamente',
+          {
+            postId: resultado.postId,
+            link: resultado.link,
+            response: tiktokResult,
+          },
+        );
+
+        resultados.push(resultado);
+      } catch (error) {
+        PublicationLogger.logError(
+          mensajeId,
+          'TIKTOK',
+          'Error publicando video IA',
+          error,
+        );
+
+        resultados.push({
+          plataforma: 'tiktok',
+          exito: false,
+          error: error.message,
+        });
+      }
+
+      // 3. Guardar resultados en la base de datos
+      await this.guardarResultadosPublicacion(
+        mensajeId,
+        resultados,
+        contenido,
+        undefined, // Sin imagen
+        videoFileName, // Con video IA
+      );
+
+      // 4. Actualizar estado final del mensaje
+      const todoExitoso = resultados.every((r) => r.exito);
+      const estadoFinal = todoExitoso ? 'PUBLICADO' : 'ERROR';
+
+      PublicationLogger.logInfo(
+        mensajeId,
+        'DATABASE',
+        'Actualizando estado final',
+        {
+          estadoFinal,
+          todoExitoso,
+        },
+      );
+
+      await this.prisma.mensaje.update({
+        where: { id: mensajeId },
+        data: {
+          estadoPublicacion: estadoFinal,
+          videoGenerado: videoFileName,
+        },
+      });
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'DATABASE',
+        'Estado final actualizado correctamente',
+      );
+
+      // Log final del proceso
+      PublicationLogger.logEnd(mensajeId, resultados);
+
+      return resultados;
+    } catch (error) {
+      PublicationLogger.logError(
+        mensajeId,
+        'AI_VIDEO',
+        'Error en proceso completo de video IA',
+        error,
+      );
+
+      // Actualizar estado de error
+      await this.prisma.mensaje.update({
+        where: { id: mensajeId },
+        data: { estadoPublicacion: 'ERROR' },
+      });
+
+      throw new Error(`Error generando video con IA: ${error.message}`);
     }
   }
 

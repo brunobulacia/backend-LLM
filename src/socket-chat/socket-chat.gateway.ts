@@ -689,4 +689,63 @@ export class SocketChatGateway
       });
     }
   }
+
+  /**
+   * Generar video con IA (Runway ML) y publicar SOLO en TikTok
+   */
+  @SubscribeMessage('generate-ai-video-tiktok')
+  async handleGenerateAIVideoTikTok(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    data: {
+      chatId: string;
+      mensajeId: string;
+      contenido: ContenidoRedesSociales;
+      promptVideo: string;
+    },
+  ): Promise<void> {
+    try {
+      console.log(
+        '🤖 Iniciando generación de video IA para TikTok:',
+        data.chatId,
+      );
+
+      // Emitir estado inicial
+      client.to(data.chatId).emit('ai-video-status', {
+        mensajeId: data.mensajeId,
+        status: 'generating',
+        message: 'Generando video con inteligencia artificial (Runway ML)...',
+        estimatedTime: '2-5 minutos',
+        progress: 0,
+      });
+
+      // Generar y publicar
+      const resultados =
+        await this.redesSocialesService.generarYPublicarVideoIA(
+          data.mensajeId,
+          data.contenido,
+          data.promptVideo,
+        );
+
+      // Emitir resultado exitoso
+      client.to(data.chatId).emit('ai-video-complete', {
+        mensajeId: data.mensajeId,
+        resultados,
+        success: true,
+        message: 'Video generado con IA y publicado en TikTok exitosamente',
+        plataformas: resultados.map((r) => r.plataforma),
+      });
+
+      console.log('✅ Video IA generado y publicado exitosamente');
+    } catch (error) {
+      console.error('❌ Error generando video IA:', error);
+
+      client.to(data.chatId).emit('ai-video-error', {
+        mensajeId: data.mensajeId,
+        error: error.message,
+        success: false,
+        message: 'Error generando video con IA',
+      });
+    }
+  }
 }
