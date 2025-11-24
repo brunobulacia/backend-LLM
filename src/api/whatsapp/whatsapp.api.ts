@@ -2,7 +2,7 @@ import axios from 'src/lib/axios';
 import { PostStoryDto } from './dto/post-story.dto';
 import * as fs from 'fs';
 import * as path from 'path';
-import FormData from 'form-data';
+import * as FormData from 'form-data';
 
 const baseUrl = 'https://gate.whapi.cloud/';
 
