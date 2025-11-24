@@ -207,8 +207,8 @@ export class SocketChatGateway
         chatId,
       );
 
-      // Generar video para TikTok
-      await this.generarVideoParaTikTok(
+      // Generar video para TikTok con IA (Runway ML)
+      await this.generarVideoIAParaTikTok(
         mensajeGuardado.id,
         contenidoRedesSociales,
         chatId,
@@ -638,54 +638,59 @@ export class SocketChatGateway
   }
 
   /**
-   * Genera un video con Sora para TikTok basado en el contenido de redes sociales
+   * Genera un video con IA (Runway ML) para TikTok basado en el contenido de redes sociales
    */
-  private async generarVideoParaTikTok(
+  private async generarVideoIAParaTikTok(
     mensajeId: string,
     contenidoRedesSociales: ContenidoRedesSociales,
     chatId: string,
   ) {
-    console.log('🎬 Generando video para TikTok...');
+    console.log('🤖 Generando video IA para TikTok automáticamente...');
 
-    // Emitir evento de inicio de generación de video
-    this.wss.emit('social-video-generation-start', {
+    // Emitir evento de inicio de generación de video IA
+    this.wss.emit('ai-video-status', {
       chatId: chatId,
       mensajeId: mensajeId,
-      message: 'Generando video para TikTok con Sora...',
+      status: 'generating',
+      message: 'Generando video automáticamente con IA (Runway ML)...',
+      estimatedTime: '2-5 minutos',
+      progress: 0,
     });
 
     try {
-      // Generar prompt optimizado para TikTok
-      const promptVideo = this.videosService.generarPromptParaTikTok(
-        contenidoRedesSociales.tiktok,
-      );
+      // Crear prompt para video basado en el título de TikTok
+      const promptVideo = `${contenidoRedesSociales.tiktok.titulo}. Video moderno y atractivo para redes sociales.`;
 
-      // Generar video con Sora
-      const rutaVideo = await this.videosService.generarVideoConSora(
-        promptVideo,
-        mensajeId,
-      );
+      console.log('🎬 Prompt para video IA:', promptVideo);
 
-      if (rutaVideo) {
-        console.log('✅ Video generado exitosamente:', rutaVideo);
+      // Generar y publicar video usando el servicio de redes sociales
+      const resultados =
+        await this.redesSocialesService.generarYPublicarVideoIA(
+          mensajeId,
+          contenidoRedesSociales,
+          promptVideo,
+        );
 
-        // Emitir evento de éxito
-        this.wss.emit('social-video-generated', {
-          chatId: chatId,
-          mensajeId: mensajeId,
-          message: 'Video para TikTok generado exitosamente',
-          videoPath: rutaVideo,
-        });
-      } else {
-        throw new Error('No se pudo generar el video');
-      }
-    } catch (error) {
-      console.error('❌ Error generando video para TikTok:', error);
-
-      this.wss.emit('social-video-generation-error', {
+      // Emitir evento de éxito
+      this.wss.emit('ai-video-complete', {
         chatId: chatId,
         mensajeId: mensajeId,
-        error: 'Error al generar el video para TikTok',
+        resultados,
+        success: true,
+        message: 'Video IA generado y publicado automáticamente en TikTok',
+        plataformas: resultados.map((r) => r.plataforma),
+      });
+
+      console.log('✅ Video IA generado y publicado automáticamente');
+    } catch (error) {
+      console.error('❌ Error generando video IA automáticamente:', error);
+
+      this.wss.emit('ai-video-error', {
+        chatId: chatId,
+        mensajeId: mensajeId,
+        error: error.message,
+        success: false,
+        message: 'Error generando video IA automáticamente',
       });
     }
   }
