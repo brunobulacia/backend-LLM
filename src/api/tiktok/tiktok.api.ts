@@ -24,11 +24,15 @@ export const crearCredencialesPublicacion = async (
       '🔑 [TIKTOK] Despues de crear credenciales de publicación con datos:',
       data,
     );
-    const response = await tiktokApi.post('/v2/post/publish/video/init/', data, {
-      headers: {
-        Authorization: `Bearer ${tiktokToken}`,
+    const response = await tiktokApi.post(
+      '/v2/post/publish/video/init/',
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${tiktokToken}`,
+        },
       },
-    });
+    );
     return response.data;
   } catch (error) {
     console.log('[TIKTOK] Error en API real, usando modo demo...');
