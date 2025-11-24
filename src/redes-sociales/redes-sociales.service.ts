@@ -312,7 +312,7 @@ export class RedesSocialesService {
     }
 
     //Publicar story en whatsapp
-    /* try {
+    try {
       // Debug: Log del contenido completo
       PublicationLogger.logInfo(
         mensajeId,
@@ -375,7 +375,7 @@ export class RedesSocialesService {
         exito: false,
         error: error.message,
       });
-    } */
+    }
 
     //Publicar en TikTok
     try {
