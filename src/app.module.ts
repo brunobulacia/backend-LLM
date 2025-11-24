@@ -27,11 +27,11 @@ import { AuthModule } from './auth/auth.module';
   ],
   controllers: [],
   providers: [
-    {
+    /*  {
       //PARA PONER EL GUARD DE JWT EN TODOS LOS ENDPOINTS PERRITOUUUU
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
-    },
+    }, */
   ],
 })
 export class AppModule {}
