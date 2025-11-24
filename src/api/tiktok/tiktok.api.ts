@@ -36,12 +36,16 @@ export const crearCredencialesPublicacion = async (
     return response.data;
   } catch (error) {
     console.log('[TIKTOK] Error en API real, usando modo demo...');
-    console.error(error);
+    console.error('Error details:', error.message);
+
     // Simular respuesta exitosa para modo demo
-    return {
+    const demoResponse = {
       upload_url: 'https://demo-upload-url.com/fake-upload',
       publish_id: `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     };
+
+    console.log('[TIKTOK] Respuesta de modo demo:', demoResponse);
+    return demoResponse;
   }
 };
 
@@ -71,6 +75,13 @@ export const subirVideoTikTok = async (videoFile: File, uploadUrl: string) => {
 
 //3. Ver el estado de la publicación
 export const verEstadoPublicacion = async (publishId: string) => {
+  // Validar que publishId existe
+  if (!publishId) {
+    throw new Error(
+      'publishId es requerido para verificar el estado de publicación',
+    );
+  }
+
   // Si es un ID de demo, simular éxito inmediato
   if (publishId.startsWith('demo_')) {
     console.log('📱 [TIKTOK] Simulando estado de publicación (modo demo)...');
@@ -131,8 +142,16 @@ export const subirVideoCompletoTikTok = async (
     titulo,
     buffer.length,
   );
-  const uploadUrl = credenciales.upload_url;
-  const publishId = credenciales.publish_id;
+
+  const uploadUrl = credenciales?.upload_url;
+  const publishId = credenciales?.publish_id;
+
+  // Validar que las credenciales se obtuvieron correctamente
+  if (!publishId || !uploadUrl) {
+    throw new Error(
+      `Credenciales incompletas de TikTok: publishId=${publishId}, uploadUrl=${uploadUrl}`,
+    );
+  }
 
   const isDemo = publishId.startsWith('demo_');
   console.log('✅ [TIKTOK] Credenciales obtenidas:', {
