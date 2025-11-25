@@ -113,7 +113,7 @@ export class RedesSocialesService {
     }
 
     // Publicar en Facebook
-    /* try {
+    try {
       PublicationLogger.logInfo(
         mensajeId,
         'FACEBOOK',
@@ -376,7 +376,7 @@ export class RedesSocialesService {
         exito: false,
         error: error.message,
       });
-    } */
+    }
 
     //Publicar en TikTok
     try {
@@ -403,7 +403,7 @@ export class RedesSocialesService {
           postId: tiktokResult.publish_id || 'unknown',
           link:
             tiktokResult.status === 'published'
-              ? 'Video publicado en TikTok'
+              ? `https://www.tiktok.com/@novedades_ficct/video/${tiktokResult.publish_id}`
               : 'No disponible',
         };
 
