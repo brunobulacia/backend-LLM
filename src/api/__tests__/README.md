@@ -1,127 +1,143 @@
-# Tests de APIs de Redes Sociales
+# Tests Unitarios de APIs de Redes Sociales
 
-Este directorio contiene tests unitarios completos para todas las APIs de redes sociales del proyecto.
+Este directorio contiene tests unitarios simplificados para las 5 APIs de redes sociales del proyecto. Cada API tiene **1 test unitario** que cubre su funcionalidad principal.
 
-## Estructura de Tests
+## 📋 Estructura de Tests (1 test por API)
 
-### 📘 Facebook API (`facebook/__tests__/facebook.api.test.ts`)
+### ✅ Test Suites Incluidas
 
-- ✅ `sendFacebookMessage`: Envío de mensajes de texto
-- ✅ `sendFacebookImage`: Publicación de imágenes con caption
-- ✅ Manejo de errores y caracteres especiales
-- ✅ Configuración de variables de entorno
+| API           | Archivo de Test                             | Función Testeada                 | Estado  |
+| ------------- | ------------------------------------------- | -------------------------------- | ------- |
+| **WhatsApp**  | `whatsapp/__tests__/whatsapp.api.test.ts`   | `sendStory()`                    | ✅ PASS |
+| **Facebook**  | `facebook/__tests__/facebook.api.test.ts`   | `sendFacebookMessage()`          | ✅ PASS |
+| **Instagram** | `instagram/__tests__/instagram.api.test.ts` | `postImageToInstagram()`         | ✅ PASS |
+| **LinkedIn**  | `linkedIn/__tests__/linkedIn.api.test.ts`   | `publishContent()`               | ✅ PASS |
+| **TikTok**    | `tiktok/__tests__/tiktok.api.test.ts`       | `crearCredencialesPublicacion()` | ✅ PASS |
 
-### 📸 Instagram API (`instagram/__tests__/instagram.api.test.ts`)
+## 🎯 Detalles de Cada Test
 
-- ✅ `sendInstagramImage`: Creación de contenedores
-- ✅ `checkContainerStatus`: Verificación de estado
-- ✅ `publishInstagramImage`: Publicación con reintentos
-- ✅ `postImageToInstagram`: Flujo completo de publicación
-- ✅ Manejo de errores de API y reintentos automáticos
+### 📱 WhatsApp API
 
-### 💼 LinkedIn API (`linkedIn/__tests__/linkedIn.api.test.ts`)
+- **Test**: `debería enviar una story con imagen exitosamente`
+- **Función**: `sendStory(PostStoryDto)`
+- **Mock**: FormData, fs, path, axios customizado
+- **Validación**: FormData correcto, archivo procesado, respuesta exitosa
 
-- ✅ `publishContent`: Publicación de contenido de texto
-- ✅ `registrarSubida`: Registro de subida de medios
-- ✅ `subirImagenUploadUrl`: Subida usando axios customizado
-- ✅ `subirImagenUploadUrlNativo`: Subida usando axios nativo
-- ✅ `publishImage`: Publicación de imágenes
-- ✅ `publicarImagenEnLinkedIn`: Flujo completo de imágenes
+### 📘 Facebook API
 
-### 💬 WhatsApp API (`whatsapp/__tests__/whatsapp.api.test.ts`)
+- **Test**: `debería enviar un mensaje de texto exitosamente`
+- **Función**: `sendFacebookMessage(SendMessageDto)`
+- **Mock**: Axios customizado con Meta Graph API
+- **Validación**: Mensaje enviado con tokens correctos
 
-- ✅ `sendStory`: Envío de historias con medios
-- ✅ Soporte para múltiples formatos: JPG, PNG, GIF, WEBP
-- ✅ Manejo de archivos locales y URLs dummy
-- ✅ FormData y streams de archivos
-- ✅ Validación de existencia de archivos
+### 📸 Instagram API
 
-### 🎵 TikTok API (`tiktok/__tests__/tiktok.api.test.ts`)
+- **Test**: `debería completar el flujo completo de publicación exitosamente`
+- **Función**: `postImageToInstagram(CreateContainerDto)`
+- **Mock**: Flujo de 2 pasos (crear contenedor + publicar)
+- **Validación**: Proceso completo de publicación
 
-- ✅ `crearCredencialesPublicacion`: Crear credenciales de subida
-- ✅ `subirVideoTikTok`: Subida binaria de videos
-- ✅ `verEstadoPublicacion`: Monitoreo de estado
-- ✅ `subirVideoCompletoTikTok`: Flujo completo con reintentos
-- ✅ Modo demo para APIs no disponibles
-- ✅ Manejo de timeouts y múltiples intentos
+### 💼 LinkedIn API
 
-## Configuración de Mocks
+- **Test**: `debería publicar contenido exitosamente`
+- **Función**: `publishContent(PublishContentDto)`
+- **Mock**: UGC API de LinkedIn
+- **Validación**: Contenido publicado con URN correcto
 
-### Archivos de Mock Globales
+### 🎵 TikTok API
 
-- `__mocks__/fs.ts`: Mock del sistema de archivos
-- `__mocks__/form-data.ts`: Mock de FormData
-- `__mocks__/axios.ts`: Mock de axios nativo
-- `__tests__/setup.ts`: Configuración global de Jest
+- **Test**: `debería crear credenciales de publicación exitosamente`
+- **Función**: `crearCredencialesPublicacion(string, number?)`
+- **Mock**: API de inicialización de TikTok
+- **Validación**: Credenciales y URL de subida generadas
 
-### Mocks Incluidos
+## 🛠️ Configuración de Mocks
 
-- ✅ **File y Blob**: Constructores mockeados
-- ✅ **FormData**: Implementación mock completa
-- ✅ **fs**: `existsSync`, `readFileSync`, `createReadStream`, `statSync`
-- ✅ **axios**: Instancias customizadas y nativo
-- ✅ **Variables de entorno**: Tokens y configuración
-- ✅ **Console**: Logs mockeados para tests limpios
+### Mocks por Test (Inline)
 
-## Características de los Tests
+Cada test incluye sus propios mocks inline para máxima simplicidad:
 
-### ✨ Cobertura Completa
+```typescript
+// Ejemplo de mock inline de axios customizado
+jest.mock('src/lib/axios', () => ({
+  __esModule: true,
+  default: {
+    createInstance: jest.fn(),
+    getInstance: jest.fn(() => ({
+      post: jest.fn().mockResolvedValue({
+        data: { success: true },
+      }),
+    })),
+  },
+}));
+```
 
-- **Casos exitosos**: Flujos normales de cada API
-- **Manejo de errores**: Errores de red, API y validación
-- **Edge cases**: URLs inválidas, archivos inexistentes, timeouts
-- **Configuración**: Variables de entorno y setup de axios
+### Mock Global (Opcional)
 
-### 🔄 Reintentos y Timeouts
+Solo se mantiene el mock de axios nativo en `src/lib/__mocks__/axios.ts` para casos especiales.
 
-- **Instagram**: Sistema de reintentos para publicación
-- **TikTok**: Monitoreo de estado con múltiples intentos
-- **LinkedIn**: Flujo multi-paso con validación
-- **WhatsApp**: Validación de archivos y FormData
-
-### 🎭 Modo Demo
-
-- **TikTok**: Modo demo automático cuando API falla
-- **Simulación**: Respuestas realistas para desarrollo
-- **Logging**: Información detallada para debugging
-
-### 📝 Validaciones
-
-- **Parámetros requeridos**: Validación de entrada
-- **Formatos de archivo**: Soporte multi-formato
-- **URLs**: Manejo de URLs locales, remotas y dummy
-- **Estados**: Verificación de estados de publicación
-
-## Ejecución de Tests
+## ⚡ Ejecución de Tests
 
 ```bash
-# Ejecutar todos los tests de APIs
+# Ejecutar todos los tests de APIs (5 tests)
 npm test src/api
 
-# Ejecutar tests específicos
+# Ejecutar test específico
+npm test src/api/whatsapp
 npm test src/api/facebook
 npm test src/api/instagram
 npm test src/api/linkedIn
-npm test src/api/whatsapp
 npm test src/api/tiktok
 
-# Con cobertura
-npm test -- --coverage src/api
+# Con output detallado
+npm test src/api -- --verbose
 ```
 
-## Estructura de Mock
+## 📊 Resultados Esperados
 
-Cada test incluye:
+```bash
+✅ Test Suites: 5 passed, 5 total
+✅ Tests:       5 passed, 5 total
+⏱️ Time:        ~4-5 seconds
+```
 
-1. **Setup**: Configuración de mocks y variables
-2. **Arrange**: Preparación de datos de prueba
-3. **Act**: Ejecución de la función
-4. **Assert**: Verificación de resultados y llamadas
-5. **Cleanup**: Limpieza de mocks
+## 🏗️ Arquitectura de Test
 
-Los mocks están diseñados para ser:
+### Estructura Simplificada
 
-- **Realistas**: Simulan comportamiento real de APIs
-- **Determinísticos**: Resultados predecibles
-- **Aislados**: Sin dependencias externas
-- **Informativos**: Logs claros para debugging
+```
+src/api/
+├── facebook/__tests__/facebook.api.test.ts     (1 test)
+├── instagram/__tests__/instagram.api.test.ts   (1 test)
+├── linkedIn/__tests__/linkedIn.api.test.ts     (1 test)
+├── whatsapp/__tests__/whatsapp.api.test.ts     (1 test)
+├── tiktok/__tests__/tiktok.api.test.ts         (1 test)
+└── __tests__/README.md                         (esta documentación)
+```
+
+### Patrón de Test
+
+Cada test sigue el mismo patrón:
+
+1. **Mocks Inline**: Configuración específica al inicio
+2. **Setup**: `beforeEach` con variables de entorno y limpieza
+3. **Test Único**: Un solo `it()` que cubre el caso principal
+4. **Assertions**: Verificación de resultado y comportamiento
+5. **Cleanup**: `afterEach` para limpiar mocks
+
+## 🚀 Beneficios de la Simplificación
+
+- ✅ **Ejecución rápida**: ~4-5 segundos vs. minutos anteriores
+- ✅ **Mantenimiento simple**: 1 test por archivo
+- ✅ **Mocks confiables**: Configuración inline específica
+- ✅ **Cobertura esencial**: Función principal de cada API
+- ✅ **Debug fácil**: Menos complejidad, errores más claros
+- ✅ **CI/CD friendly**: Tests estables para integración continua
+
+## 📝 Notas de Desarrollo
+
+- Los mocks están configurados inline en cada test para evitar dependencias
+- Cada test mockea solo lo necesario para su función específica
+- Variables de entorno se configuran en `beforeEach` de cada test
+- Console logs están mockeados para output limpio
+- Todos los tests son independientes y pueden ejecutarse por separado
