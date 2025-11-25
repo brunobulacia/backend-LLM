@@ -47,21 +47,33 @@ export const crearVideoTextToVideo = async (
   try {
     console.log('🎬 [RUNWAY] Iniciando generación text-to-video:', request);
 
-    const response = await runwayApi.post('/v1/text_to_video', {
+    // Estructura exacta como en Postman que funciona
+    const requestBody = {
       promptText: request.promptText,
-      ratio: request.ratio || '720:1280', // Vertical para TikTok
-      audio: request.audio !== false, // true por defecto
-      duration: request.duration || 2, // 2 segundos para TikTok
-      model: request.model || 'veo3.1',
-    });
+      ratio: '1280:720', // Cambio a horizontal como en Postman exitoso
+      audio: true,
+      duration: 2,
+      model: 'veo3.1',
+    };
+
+    console.log(
+      '🎬 [RUNWAY] Request body:',
+      JSON.stringify(requestBody, null, 2),
+    );
+
+    const response = await runwayApi.post('/v1/text_to_video', requestBody);
 
     console.log('🎬 [RUNWAY] Tarea creada:', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ [RUNWAY] Error creando video:', error);
     if (error.response) {
-      console.error('Response data:', error.response.data);
+      console.error(
+        'Response data:',
+        JSON.stringify(error.response.data, null, 2),
+      );
       console.error('Response status:', error.response.status);
+      console.error('Response headers:', error.response.headers);
     }
     throw new Error(`Error creando video en Runway: ${error.message}`);
   }
@@ -123,10 +135,10 @@ export const generarVideoParaTikTok = async (
   try {
     console.log('🚀 [RUNWAY] Iniciando generación de video para TikTok...');
 
-    // Configuración optimizada para TikTok
+    // Configuración según Postman exitoso
     const request: RunwayVideoRequest = {
       promptText,
-      ratio: '720:1280', // Formato vertical de TikTok
+      ratio: '1280:720', // Formato horizontal como en Postman exitoso
       audio: true,
       duration: 2, // 2 segundos como solicitaste
       model: 'veo3.1',
