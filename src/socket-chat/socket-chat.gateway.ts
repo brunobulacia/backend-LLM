@@ -198,7 +198,7 @@ export class SocketChatGateway
       estadoPublicacion: estadoPublicacion as any,
     });
 
-    // Si es contenido de redes sociales, generar imagen y video automáticamente
+    // Si es contenido de redes sociales, generar imagen y video PERO NO PUBLICAR AÚN
     if (isContenidoRedesSociales) {
       // Generar imagen para redes sociales (Facebook, Instagram, LinkedIn, WhatsApp)
       await this.generarImagenParaRedesSociales(
@@ -638,21 +638,21 @@ export class SocketChatGateway
   }
 
   /**
-   * Genera un video con IA (Runway ML) para TikTok basado en el contenido de redes sociales
+   * SOLO genera un video con IA (Runway ML) para TikTok (sin publicar)
    */
   private async generarVideoIAParaTikTok(
     mensajeId: string,
     contenidoRedesSociales: ContenidoRedesSociales,
     chatId: string,
   ) {
-    console.log('🤖 Generando video IA para TikTok automáticamente...');
+    console.log('🤖 Generando video IA para TikTok (sin publicar aún)...');
 
     // Emitir evento de inicio de generación de video IA
     this.wss.emit('ai-video-status', {
       chatId: chatId,
       mensajeId: mensajeId,
       status: 'generating',
-      message: 'Generando video automáticamente con IA (Runway ML)...',
+      message: 'Generando video con IA (Runway ML)...',
       estimatedTime: '2-5 minutos',
       progress: 0,
     });
@@ -663,34 +663,31 @@ export class SocketChatGateway
 
       console.log('🎬 Prompt para video IA:', promptVideo);
 
-      // Generar y publicar video usando el servicio de redes sociales
-      const resultados =
-        await this.redesSocialesService.generarYPublicarVideoIA(
-          mensajeId,
-          contenidoRedesSociales,
-          promptVideo,
-        );
+      // SOLO generar video (sin publicar)
+      const videoFileName = await this.redesSocialesService.soloGenerarVideoIA(
+        mensajeId,
+        promptVideo,
+      );
 
-      // Emitir evento de éxito
+      // Emitir evento de éxito de generación (sin publicación)
       this.wss.emit('ai-video-complete', {
         chatId: chatId,
         mensajeId: mensajeId,
-        resultados,
         success: true,
-        message: 'Video IA generado y publicado automáticamente en TikTok',
-        plataformas: resultados.map((r) => r.plataforma),
+        message: 'Video IA generado correctamente. Listo para publicar.',
+        videoFileName: videoFileName,
       });
 
-      console.log('✅ Video IA generado y publicado automáticamente');
+      console.log('✅ Video IA generado (listo para publicar con botón)');
     } catch (error) {
-      console.error('❌ Error generando video IA automáticamente:', error);
+      console.error('❌ Error generando video IA:', error);
 
       this.wss.emit('ai-video-error', {
         chatId: chatId,
         mensajeId: mensajeId,
         error: error.message,
         success: false,
-        message: 'Error generando video IA automáticamente',
+        message: 'Error generando video IA',
       });
     }
   }

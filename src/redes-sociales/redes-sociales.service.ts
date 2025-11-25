@@ -609,6 +609,52 @@ export class RedesSocialesService {
   }
 
   /**
+   * SOLO generar video con IA usando Runway ML (sin publicar)
+   */
+  async soloGenerarVideoIA(
+    mensajeId: string,
+    promptVideo: string,
+  ): Promise<string> {
+    try {
+      PublicationLogger.logInfo(
+        mensajeId,
+        'RUNWAY',
+        'Iniciando generación de video IA (sin publicación)',
+        { prompt: promptVideo },
+      );
+
+      // Generar video con Runway ML
+      const videoFileName = await generarVideoParaTikTok(promptVideo);
+
+      // Actualizar mensaje con el video generado
+      await this.prisma.mensaje.update({
+        where: { id: mensajeId },
+        data: {
+          videoGenerado: videoFileName,
+          estadoPublicacion: 'PENDIENTE_CONFIRMACION', // Esperando botón
+        },
+      });
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'RUNWAY',
+        'Video IA generado exitosamente (listo para publicar)',
+        { videoFileName },
+      );
+
+      return videoFileName;
+    } catch (error) {
+      PublicationLogger.logError(
+        mensajeId,
+        'RUNWAY',
+        'Error generando video IA',
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Generar video con IA usando Runway ML y publicar SOLO en TikTok
    */
   async generarYPublicarVideoIA(
@@ -762,6 +808,242 @@ export class RedesSocialesService {
 
       throw new Error(`Error generando video con IA: ${error.message}`);
     }
+  }
+
+  /**
+   * Publica SOLO imagen en Facebook, Instagram, LinkedIn y WhatsApp
+   * (sin TikTok, que se maneja por separado con video)
+   */
+  async publicarSoloImagenEnRedes(
+    mensajeId: string,
+    contenido: ContenidoRedesSociales,
+    rutaImagen: string,
+  ): Promise<ResultadoPublicacion[]> {
+    const resultados: ResultadoPublicacion[] = [];
+
+    // Log inicio del proceso
+    PublicationLogger.logStart(mensajeId, contenido, rutaImagen);
+
+    // Actualizar estado del mensaje a PUBLICANDO
+    PublicationLogger.logInfo(
+      mensajeId,
+      'DATABASE',
+      'Actualizando estado a PUBLICANDO (solo imagen)',
+    );
+    await this.prisma.mensaje.update({
+      where: { id: mensajeId },
+      data: { estadoPublicacion: 'PUBLICANDO' },
+    });
+
+    // Preparar imagen
+    let imagenFile: File | undefined;
+    let imagenUrl: string | undefined;
+
+    const fullPath = path.join(process.cwd(), 'uploads', 'images', rutaImagen);
+
+    if (fs.existsSync(fullPath)) {
+      // Para LinkedIn necesitamos un File object
+      const buffer = fs.readFileSync(fullPath);
+      const blob = new Blob([buffer]);
+      imagenFile = new File([blob], path.basename(rutaImagen), {
+        type: 'image/png',
+      });
+
+      // URL para Facebook e Instagram
+      imagenUrl = `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/images/${rutaImagen}`;
+    } else {
+      PublicationLogger.logError(mensajeId, 'IMAGE', 'Imagen no encontrada', {
+        fullPath,
+      });
+      throw new Error('Imagen no encontrada para publicación');
+    }
+
+    // Publicar en Facebook
+    try {
+      PublicationLogger.logInfo(
+        mensajeId,
+        'FACEBOOK',
+        'Iniciando publicación en Facebook',
+      );
+
+      const facebookResult = await sendFacebookImage({
+        imageUrl: imagenUrl,
+        caption: contenido.facebook.caption,
+      });
+
+      resultados.push({
+        plataforma: 'facebook',
+        exito: true,
+        postId: facebookResult?.id || 'unknown',
+        link: facebookResult?.id
+          ? `https://facebook.com/${facebookResult.id}`
+          : 'No disponible',
+      });
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'FACEBOOK',
+        'Publicación exitosa',
+      );
+    } catch (error) {
+      PublicationLogger.logError(
+        mensajeId,
+        'FACEBOOK',
+        'Error en publicación',
+        error,
+      );
+      resultados.push({
+        plataforma: 'facebook',
+        exito: false,
+        error: error.message,
+      });
+    }
+
+    // Publicar en Instagram
+    try {
+      PublicationLogger.logInfo(
+        mensajeId,
+        'INSTAGRAM',
+        'Iniciando publicación en Instagram',
+      );
+
+      const publicacion = await postImageToInstagram({
+        image_url: imagenUrl,
+        caption: contenido.instagram.caption,
+      });
+
+      resultados.push({
+        plataforma: 'instagram',
+        exito: true,
+        postId: publicacion?.id || 'unknown',
+        link: publicacion?.id
+          ? `https://instagram.com/p/${publicacion.id}`
+          : 'No disponible',
+      });
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'INSTAGRAM',
+        'Publicación exitosa',
+      );
+    } catch (error) {
+      PublicationLogger.logError(
+        mensajeId,
+        'INSTAGRAM',
+        'Error en publicación',
+        error,
+      );
+      resultados.push({
+        plataforma: 'instagram',
+        exito: false,
+        error: error.message,
+      });
+    }
+
+    // Publicar en LinkedIn
+    try {
+      PublicationLogger.logInfo(
+        mensajeId,
+        'LINKEDIN',
+        'Iniciando publicación en LinkedIn',
+      );
+
+      const linkedinResult = await publicarImagenEnLinkedIn(
+        contenido.linkedin.caption,
+        imagenFile,
+      );
+
+      resultados.push({
+        plataforma: 'linkedin',
+        exito: true,
+        postId: linkedinResult?.id || 'unknown',
+        link: linkedinResult?.id
+          ? `https://linkedin.com/feed/update/${linkedinResult.id}`
+          : 'No disponible',
+      });
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'LINKEDIN',
+        'Publicación exitosa',
+      );
+    } catch (error) {
+      PublicationLogger.logError(
+        mensajeId,
+        'LINKEDIN',
+        'Error en publicación',
+        error,
+      );
+      resultados.push({
+        plataforma: 'linkedin',
+        exito: false,
+        error: error.message,
+      });
+    }
+
+    // Publicar en WhatsApp
+    try {
+      PublicationLogger.logInfo(
+        mensajeId,
+        'WHATSAPP',
+        'Iniciando publicación en WhatsApp',
+      );
+
+      const whatsappResult = await sendStory({
+        media: `dummy:///${rutaImagen}`,
+        caption: contenido.whatsapp?.caption || 'Contenido para WhatsApp Story',
+        exclude_contacts: contactos,
+      });
+
+      resultados.push({
+        plataforma: 'whatsapp',
+        exito: true,
+        postId: whatsappResult?.id || 'story',
+        link: 'WhatsApp Story publicado',
+      });
+
+      PublicationLogger.logSuccess(
+        mensajeId,
+        'WHATSAPP',
+        'Story publicado exitosamente',
+      );
+    } catch (error) {
+      PublicationLogger.logError(
+        mensajeId,
+        'WHATSAPP',
+        'Error en publicación',
+        error,
+      );
+      resultados.push({
+        plataforma: 'whatsapp',
+        exito: false,
+        error: error.message,
+      });
+    }
+
+    // Guardar resultados en la base de datos
+    await this.guardarResultadosPublicacion(
+      mensajeId,
+      resultados,
+      contenido,
+      rutaImagen,
+      undefined, // Sin video
+    );
+
+    // Actualizar estado final del mensaje
+    const todoExitoso = resultados.every((r) => r.exito);
+    const estadoFinal = todoExitoso ? 'PUBLICADO' : 'ERROR';
+
+    await this.prisma.mensaje.update({
+      where: { id: mensajeId },
+      data: {
+        estadoPublicacion: estadoFinal,
+      },
+    });
+
+    PublicationLogger.logEnd(mensajeId, resultados);
+
+    return resultados;
   }
 
   /**
