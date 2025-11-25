@@ -19,7 +19,7 @@ export interface RunwayVideoRequest {
   promptText: string;
   ratio?: '1280:720' | '720:1280' | '1024:1024'; // Ratios disponibles
   audio?: boolean;
-  duration?: number; // Duración en segundos
+  duration?: 4 | 6 | 8; // Duración en segundos - Solo 4, 6, u 8 son válidos
   model?: 'veo3.1'; // Modelo disponible
 }
 
@@ -47,13 +47,22 @@ export const crearVideoTextToVideo = async (
   try {
     console.log('🎬 [RUNWAY] Iniciando generación text-to-video:', request);
 
+    // Validar y ajustar duración a valores válidos de Runway ML (4, 6, 8)
+    let validDuration = request.duration || 4;
+    if (![4, 6, 8].includes(validDuration)) {
+      console.log(
+        `⚠️ [RUNWAY] Duración ${validDuration} no válida, usando 4 segundos`,
+      );
+      validDuration = 4; // Usar 4 como el mínimo válido
+    }
+
     // Estructura exacta como en Postman que funciona
     const requestBody = {
       promptText: request.promptText,
-      ratio: '1280:720', // Cambio a horizontal como en Postman exitoso
-      audio: true,
-      duration: 2,
-      model: 'veo3.1',
+      ratio: request.ratio || '1280:720', // Horizontal como en Postman exitoso
+      audio: request.audio !== false, // true por defecto
+      duration: validDuration, // Solo 4, 6, o 8 son válidos
+      model: request.model || 'veo3.1',
     };
 
     console.log(
@@ -140,7 +149,7 @@ export const generarVideoParaTikTok = async (
       promptText,
       ratio: '1280:720', // Formato horizontal como en Postman exitoso
       audio: true,
-      duration: 2, // 2 segundos como solicitaste
+      duration: 4, // 4 segundos (mínimo válido para Runway ML)
       model: 'veo3.1',
     };
 
