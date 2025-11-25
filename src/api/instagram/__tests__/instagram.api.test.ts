@@ -28,6 +28,8 @@ describe('Instagram API', () => {
     jest.clearAllMocks();
     process.env.META_ACCESS_TOKEN = 'mock_meta_token';
     process.env.IG_USER_ID = 'mock_ig_user_id';
+
+    //ESTO ES PARA NO MOSTRAR LOS ERRORES EN CONSOLA DURANTE LAS PRUEBAS
     jest.spyOn(console, 'log').mockImplementation();
     jest.spyOn(console, 'error').mockImplementation();
   });

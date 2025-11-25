@@ -1,4 +1,3 @@
-// Mock del axios customizado
 jest.mock('src/lib/axios', () => ({
   __esModule: true,
   default: {
@@ -30,7 +29,7 @@ describe('Facebook API', () => {
   it('debería enviar un mensaje de texto exitosamente', async () => {
     // Arrange
     const sendMessageDto: SendMessageDto = {
-      message: 'Test message for Facebook',
+      message: 'Hola crack!😈',
     };
 
     // Act
