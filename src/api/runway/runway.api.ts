@@ -60,7 +60,7 @@ export const crearVideoTextToVideo = async (
     const requestBody = {
       promptText: request.promptText,
       ratio: request.ratio || '1280:720', // Horizontal como en Postman exitoso
-      audio: request.audio !== false, // true por defecto
+      audio: false, // Siempre false para TikTok
       duration: validDuration, // Solo 4, 6, o 8 son válidos
       model: request.model || 'veo3.1',
     };
@@ -148,7 +148,7 @@ export const generarVideoParaTikTok = async (
     const request: RunwayVideoRequest = {
       promptText,
       ratio: '1280:720', // Formato horizontal como en Postman exitoso
-      audio: true,
+      audio: false,
       duration: 4, // 4 segundos (mínimo válido para Runway ML)
       model: 'veo3.1',
     };

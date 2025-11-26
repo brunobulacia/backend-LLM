@@ -30,7 +30,7 @@ describe('LinkedIn API', () => {
     jest.restoreAllMocks();
   });
 
-  it('debería publicar contenido exitosamente', async () => {
+  it('debería publicar contenido exitosamentee', async () => {
     // Arrange
     const publishContentDto: PublishContentDto = {
       author: 'urn:li:person:mock_urn_person',
