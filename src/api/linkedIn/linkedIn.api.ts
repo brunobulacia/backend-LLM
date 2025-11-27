@@ -25,7 +25,7 @@ export const publishContent = async (publishContent: PublishContentDto) => {
         Authorization: `Bearer ${linkedInToken}`,
       },
     });
-    return response.data;
+    return null;
   } catch (error) {
     console.error('Error publicando contenido en LinkedIn:', error);
     throw error;

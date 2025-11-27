@@ -20,7 +20,7 @@ export interface RunwayVideoRequest {
   ratio?: '1280:720' | '720:1280' | '1024:1024'; // Ratios disponibles
   audio?: boolean;
   duration?: 4 | 6 | 8; // Duración en segundos - Solo 4, 6, u 8 son válidos
-  model?: 'veo3.1'; // Modelo disponible
+  model?: 'veo3.1_fast'; // Modelo disponible
 }
 
 export interface RunwayTaskResponse {
@@ -62,7 +62,7 @@ export const crearVideoTextToVideo = async (
       ratio: request.ratio || '1280:720', // Horizontal como en Postman exitoso
       audio: false, // Siempre false para TikTok
       duration: validDuration, // Solo 4, 6, o 8 son válidos
-      model: request.model || 'veo3.1',
+      model: request.model || 'veo3.1_fast',
     };
 
     console.log(
@@ -150,7 +150,7 @@ export const generarVideoParaTikTok = async (
       ratio: '1280:720', // Formato horizontal como en Postman exitoso
       audio: false,
       duration: 4, // 4 segundos (mínimo válido para Runway ML)
-      model: 'veo3.1',
+      model: 'veo3.1_fast',
     };
 
     // 1. Crear la tarea
